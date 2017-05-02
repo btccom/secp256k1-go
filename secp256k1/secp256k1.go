@@ -1,6 +1,8 @@
 package secp256k1
 
 // #include "c-secp256k1/include/secp256k1.h"
+// #include "c-secp256k1/include/secp256k1_ecdh.h"
+// #include "c-secp256k1/include/secp256k1_recovery.h"
 // #cgo LDFLAGS: ${SRCDIR}/c-secp256k1/.libs/libsecp256k1.a -lgmp
 import "C"
 
@@ -27,6 +29,18 @@ type PublicKey struct {
 	pk *C.secp256k1_pubkey
 }
 
+type EcdsaSignature struct {
+	sig *C.secp256k1_ecdsa_signature
+}
+type EcdsaRecoverableSignature struct {
+	sig *C.secp256k1_ecdsa_recoverable_signature
+}
+
+func newContext () *Context {
+	return &Context{
+		ctx: &C.secp256k1_context{},
+	}
+}
 func newPublicKey() *PublicKey {
 	return &PublicKey{
 		pk: &C.secp256k1_pubkey{},
@@ -37,9 +51,10 @@ func newEcdsaSignature() *EcdsaSignature {
 		sig: &C.secp256k1_ecdsa_signature{},
 	}
 }
-
-type EcdsaSignature struct {
-	sig *C.secp256k1_ecdsa_signature
+func newEcdsaRecoverableSignature() *EcdsaRecoverableSignature {
+	return &EcdsaRecoverableSignature{
+		sig: &C.secp256k1_ecdsa_recoverable_signature{},
+	}
 }
 
 /** Create a secp256k1 context object.
@@ -49,7 +64,7 @@ type EcdsaSignature struct {
  */
 func ContextCreate(flags uint) (*Context, error) {
 
-	context := &Context{}
+	context := newContext()
 	context.ctx = C.secp256k1_context_create(C.uint(flags))
 
 	return context, nil
@@ -62,7 +77,7 @@ func ContextCreate(flags uint) (*Context, error) {
  */
 func ContextClone(ctx *Context) (*Context, error) {
 
-	other := &Context{}
+	other := newContext()
 	other.ctx = C.secp256k1_context_clone(ctx.ctx)
 
 	return other, nil
@@ -409,6 +424,113 @@ func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
 	}
 	return result, pkOut, nil
 }
+
+/** Compute an EC Diffie-Hellman secret in constant time
+ *  Returns: 1: exponentiation was successful
+ *           0: scalar was invalid (zero or overflow)
+ *  Args:    ctx:        pointer to a context object (cannot be NULL)
+ *  Out:     result:     a 32-byte array which will be populated by an ECDH
+ *                       secret computed from the point and scalar
+ *  In:      pubkey:     a pointer to a secp256k1_pubkey containing an
+ *                       initialized public key
+ *           privkey:    a 32-byte scalar with which to multiply the point
+ */
+func Ecdh(ctx *Context, pubKey *PublicKey, privKey []byte) (int, []byte, error) {
+	secret := make([]byte, 32)
+	result := int(C.secp256k1_ecdh(ctx.ctx, cBuf(secret[:]), pubKey.pk, cBuf(privKey[:])))
+	if result != 1 {
+		return result, []byte(``), errors.New("Failed to do ECDH")
+	}
+	return result, secret, nil
+}
+
+/** Parse a compact ECDSA signature (64 bytes + recovery id).
+ *
+ *  Returns: 1 when the signature could be parsed, 0 otherwise
+ *  Args: ctx:     a secp256k1 context object
+ *  Out:  sig:     a pointer to a signature object
+ *  In:   input64: a pointer to a 64-byte compact signature
+ *        recid:   the recovery id (0, 1, 2 or 3)
+ */
+func EcdsaRecoverableSignatureParseCompact(ctx *Context, signature []byte, recid int) (int, *EcdsaRecoverableSignature, error) {
+	if len(signature) != 64 {
+		return 0, nil, errors.New("Compact signature must be 64 bytes")
+	}
+
+	sig := newEcdsaRecoverableSignature()
+
+	result := int(C.secp256k1_ecdsa_recoverable_signature_parse_compact(ctx.ctx, sig.sig,
+		(*C.uchar)(unsafe.Pointer(&signature[0])), (C.int(recid))))
+
+	if result != 1 {
+		return result, nil, errors.New("Unable to parse this recoverable signature")
+	}
+	return result, sig, nil
+}
+
+/** Serialize an ECDSA signature in compact format (64 bytes + recovery id).
+ *
+ *  Returns: 1
+ *  Args: ctx:      a secp256k1 context object
+ *  Out:  output64: a pointer to a 64-byte array of the compact signature (cannot be NULL)
+ *        recid:    a pointer to an integer to hold the recovery id (can be NULL).
+ *  In:   sig:      a pointer to an initialized signature object (cannot be NULL)
+ */
+func EcdsaRecoverableSignatureSerializeCompact(ctx *Context, sig *EcdsaRecoverableSignature, recid int) (int, []byte, error) {
+	output := make([]C.uchar, 64)
+	outputLen := C.size_t(64)
+
+	r := (C.int)(recid)
+	result := int(C.secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx.ctx, &output[0], &r, sig.sig))
+	if result != 1 {
+		return result, []byte(``), errors.New("Unable to serialize this recoverable signature")
+	}
+	return result, goBytes(output, C.int(outputLen)), nil
+}
+
+/** Convert a recoverable signature into a normal signature.
+ *
+ *  Returns: 1
+ *  Out: sig:    a pointer to a normal signature (cannot be NULL).
+ *  In:  sigin:  a pointer to a recoverable signature (cannot be NULL).
+ */
+func EcdsaRecoverableSignatureConvert(ctx *Context, sig *EcdsaRecoverableSignature) (int, *EcdsaSignature, error) {
+	sigOut := newEcdsaSignature()
+	result := int(C.secp256k1_ecdsa_recoverable_signature_convert(ctx.ctx, sigOut.sig, sig.sig))
+	if result != 1 {
+		return result, nil, errors.New("Unable to serialize this recoverable signature")
+	}
+	return result, sigOut, nil
+}
+
+func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaRecoverableSignature, error) {
+	if len(msg32) != 32 {
+		return 0, nil, errors.New("Message hash must be exactly 32 bytes");
+	}
+	if len(seckey) != 32 {
+		return 0, nil, errors.New("Private key must be exactly 32 bytes");
+	}
+
+	recoverable := newEcdsaRecoverableSignature()
+	result := int(C.secp256k1_ecdsa_sign_recoverable(ctx.ctx, recoverable.sig, cBuf(msg32), cBuf(seckey), nil, nil))
+	if result != 1 {
+		return result, nil, errors.New("Failed to produce recoverable signature")
+	}
+	return result, recoverable, nil
+
+}
+func EcdsaRecover(ctx *Context, sig *EcdsaRecoverableSignature, msg32 []byte) (int, *PublicKey, error) {
+	if len(msg32) != 32 {
+		return 0, nil, errors.New("Message hash must be exactly 32 bytes");
+	}
+	recovered := newPublicKey()
+	result := int(C.secp256k1_ecdsa_recover(ctx.ctx, recovered.pk, sig.sig, cBuf(msg32)))
+	if result != 1 {
+		return result, nil, errors.New("Failed to recover public key")
+	}
+	return result, recovered, nil
+}
+
 func cBuf(goSlice []byte) *C.uchar {
 	return (*C.uchar)(unsafe.Pointer(&goSlice[0]))
 }
@@ -416,3 +538,4 @@ func cBuf(goSlice []byte) *C.uchar {
 func goBytes(cSlice []C.uchar, size C.int) []byte {
 	return C.GoBytes(unsafe.Pointer(&cSlice[0]), size)
 }
+
