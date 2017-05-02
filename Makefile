@@ -31,3 +31,4 @@ test-secp256k1: test-cleanup
 	github.com/btccom/secp256k1-go/secp256k1... \
 	$(TESTARGS)
 
+sanity: build-test test

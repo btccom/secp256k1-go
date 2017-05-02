@@ -9,8 +9,13 @@ import(
 )
 
 const (
-	Secp256k1ContextVerify = C.SECP256K1_CONTEXT_VERIFY
-	Secp256k1ContextSign = C.SECP256K1_CONTEXT_SIGN
+	/** Flags to pass to secp256k1_context_create. */
+	ContextVerify = C.SECP256K1_CONTEXT_VERIFY
+	ContextSign = C.SECP256K1_CONTEXT_SIGN
+
+	/** Flag to pass to secp256k1_ec_pubkey_serialize and secp256k1_ec_privkey_export. */
+	EcCompressed = C.SECP256K1_EC_COMPRESSED
+	EcUncompressed = C.SECP256K1_EC_UNCOMPRESSED
 )
 
 type Context struct {
@@ -30,6 +35,11 @@ func ContextCreate(flags uint) (*Context, error) {
 	return context, nil
 }
 
+/** Copies a secp256k1 context object.
+ *
+ *  Returns: a newly created context object.
+ *  Args:    ctx: an existing context to copy (cannot be NULL)
+ */
 func ContextClone(ctx *Context) (*Context, error) {
 
 	other := &Context{}
@@ -38,6 +48,11 @@ func ContextClone(ctx *Context) (*Context, error) {
 	return other, nil
 }
 
+/** Destroy a secp256k1 context object.
+ *
+ *  The context pointer may not be used afterwards.
+ *  Args:   ctx: an existing context to destroy (cannot be NULL)
+ */
 func ContextDestroy(ctx *Context) {
 	C.secp256k1_context_destroy(ctx.ctx)
 }
@@ -51,6 +66,11 @@ func ContextDestroy(ctx *Context) {
 func ContextRandomize(ctx *Context, seed32 [32]byte) int {
 	return int(C.secp256k1_context_randomize(ctx.ctx, cBuf(seed32[:])))
 }
+
+
+
+
+
 
 func cBuf(goSlice []byte) *C.uchar {
 	return (*C.uchar)(unsafe.Pointer(&goSlice[0]))

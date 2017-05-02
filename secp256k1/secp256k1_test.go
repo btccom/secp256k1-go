@@ -18,7 +18,7 @@ func testingRand32() [32]byte {
 
 func Test_ContextCreate(t *testing.T) {
 
-	params := uint(Secp256k1ContextSign | Secp256k1ContextVerify)
+	params := uint(ContextSign | ContextVerify)
 	ctx, err := ContextCreate(params)
 
 	assert.NoError(t, err)

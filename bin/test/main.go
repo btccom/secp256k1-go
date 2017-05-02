@@ -23,7 +23,7 @@ func Rand32() [32]byte {
 func main() {
 	log.Println("HI")
 
-	params := uint(secp256k1.Secp256k1ContextSign | secp256k1.Secp256k1ContextVerify)
+	params := uint(secp256k1.ContextSign | secp256k1.ContextVerify)
 	ctx, err := secp256k1.ContextCreate(params)
 	if err != nil {
 		panic(err)
