@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"github.com/btccom/secp256k1-go"
+	//"context"
+
+	"context"
 )
 
 func main() {
@@ -19,4 +22,9 @@ func main() {
 		panic(err)
 	}
 	log.Printf("%+v\n", clone)
+
+	context.Destroy(clone)
+	log.Printf("%+v\n", clone)
+
+	context.Randomize()
 }

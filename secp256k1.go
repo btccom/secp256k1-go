@@ -1,4 +1,4 @@
-package context
+package secp256k1
 /*
 #cgo LDFLAGS: -lsecp256k1
 #include <secp256k1.h>
@@ -33,3 +33,16 @@ func Clone(ctx *Context) (*Context, error) {
 	return other, nil
 }
 
+func Destroy(ctx *Context) {
+	C.secp256k1_context_destroy(ctx.ctx)
+}
+
+/** Updates the context randomization.
+ *  Returns: 1: randomization successfully updated
+ *           0: error
+ *  Args:    ctx:       pointer to a context object (cannot be NULL)
+ *  In:      seed32:    pointer to a 32-byte random seed (NULL resets to initial state)
+ */
+func Randomize(ctx *Context, seed32 [32]byte) int {
+	return int(C.secp256k1_context_randomize(ctx.ctx, cBuf(seed32[:])))
+}
