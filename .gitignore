@@ -1,1 +1,4 @@
-build/*
+build/
+coverage/
+coverage.*
+vendor/*
