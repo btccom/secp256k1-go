@@ -32,3 +32,16 @@ test-secp256k1: test-cleanup
 	$(TESTARGS)
 
 sanity: build-test test
+
+# concat all coverage reports together
+coverage-concat:
+	echo "mode: set" > coverage/full && \
+    grep -h -v "^mode:" coverage/*.out >> coverage/full
+
+# full coverage report
+coverage: coverage-concat
+	go tool cover -func=coverage/full $(COVERAGEARGS)
+
+# full coverage report
+coverage-html: coverage-concat
+	go tool cover -html=coverage/full $(COVERAGEARGS)

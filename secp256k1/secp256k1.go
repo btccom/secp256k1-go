@@ -27,6 +27,21 @@ type PublicKey struct {
 	pk *C.secp256k1_pubkey
 }
 
+func newPublicKey() *PublicKey {
+	return &PublicKey{
+		pk: &C.secp256k1_pubkey{},
+	}
+}
+func newEcdsaSignature() *EcdsaSignature {
+	return &EcdsaSignature{
+		sig: &C.secp256k1_ecdsa_signature{},
+	}
+}
+
+type EcdsaSignature struct {
+	sig *C.secp256k1_ecdsa_signature
+}
+
 /** Create a secp256k1 context object.
  *
  *  Returns: a newly created context object.
@@ -87,9 +102,7 @@ func ContextRandomize(ctx *Context, seed32 [32]byte) int {
  *  byte 0x06 or 0x07) format public keys.
  */
 func EcPubkeyParse(ctx *Context, publicKey []byte) (int, *PublicKey, error) {
-	pk := &PublicKey{
-		pk: &C.secp256k1_pubkey{},
-	}
+	pk := newPublicKey()
 
 	result := int(C.secp256k1_ec_pubkey_parse(ctx.ctx, pk.pk, cBuf(publicKey), C.size_t(len(publicKey))))
 	if result != 1 {
@@ -131,6 +144,271 @@ func EcPubkeySerialize(ctx *Context, publicKey *PublicKey, flags uint) (int, []b
 	return result, goBytes(output, C.int(outputLen)), nil
 }
 
+/** Parse an ECDSA signature in compact (64 bytes) format.
+ *
+ *  Returns: 1 when the signature could be parsed, 0 otherwise.
+ *  Args: ctx:      a secp256k1 context object
+ *  Out:  sig:      a pointer to a signature object
+ *  In:   input64:  a pointer to the 64-byte array to parse
+ *
+ *  The signature must consist of a 32-byte big endian R value, followed by a
+ *  32-byte big endian S value. If R or S fall outside of [0..order-1], the
+ *  encoding is invalid. R and S with value 0 are allowed in the encoding.
+ *
+ *  After the call, sig will always be initialized. If parsing failed or R or
+ *  S are zero, the resulting sig value is guaranteed to fail validation for any
+ *  message and public key.
+ */
+func EcdsaSignatureParseCompact(ctx *Context, signature []byte) (int, *EcdsaSignature, error) {
+	if len(signature) != 64 {
+		return 0, nil, errors.New("Compact signature must be 64 bytes")
+	}
+
+	sig := newEcdsaSignature()
+
+	result := int(C.secp256k1_ecdsa_signature_parse_compact(ctx.ctx, sig.sig,
+		(*C.uchar)(unsafe.Pointer(&signature[0])),
+		))
+	if result != 1 {
+		return result, nil, errors.New("Unable to parse this compact signature")
+	}
+	return result, sig, nil
+}
+
+/** Serialize an ECDSA signature in compact (64 byte) format.
+ *
+ *  Returns: 1
+ *  Args:   ctx:       a secp256k1 context object
+ *  Out:    output64:  a pointer to a 64-byte array to store the compact serialization
+ *  In:     sig:       a pointer to an initialized signature object
+ *
+ *  See secp256k1_ecdsa_signature_parse_compact for details about the encoding.
+ */
+func EcdsaSignatureSerializeCompact(ctx *Context, sig *EcdsaSignature) (int, []byte, error) {
+	output := make([]C.uchar, 64)
+	outputLen := C.size_t(64)
+
+	result := int(C.secp256k1_ecdsa_signature_serialize_compact(ctx.ctx, &output[0], sig.sig))
+	if result != 1 {
+		return result, []byte(``), errors.New("Unable to serialize this compact signature")
+	}
+	return result, goBytes(output, C.int(outputLen)), nil
+}
+
+/** Parse a DER ECDSA signature.
+ *
+ *  Returns: 1 when the signature could be parsed, 0 otherwise.
+ *  Args: ctx:      a secp256k1 context object
+ *  Out:  sig:      a pointer to a signature object
+ *  In:   input:    a pointer to the signature to be parsed
+ *        inputlen: the length of the array pointed to be input
+ *
+ *  This function will accept any valid DER encoded signature, even if the
+ *  encoded numbers are out of range.
+ *
+ *  After the call, sig will always be initialized. If parsing failed or the
+ *  encoded numbers are out of range, signature validation with it is
+ *  guaranteed to fail for every message and public key.
+ */
+func EcdsaSignatureParseDer(ctx *Context, signature []byte) (int, *EcdsaSignature, error) {
+	sig := newEcdsaSignature()
+
+	result := int(C.secp256k1_ecdsa_signature_parse_der(ctx.ctx, sig.sig,
+		(*C.uchar)(unsafe.Pointer(&signature[0])),
+		(C.size_t)(len(signature))))
+
+	if result != 1 {
+		return result, nil, errors.New("Unable to parse this DER signature");
+	}
+	return result, sig, nil
+}
+
+/** Serialize an ECDSA signature in DER format.
+ *
+ *  Returns: 1 if enough space was available to serialize, 0 otherwise
+ *  Args:   ctx:       a secp256k1 context object
+ *  Out:    output:    a pointer to an array to store the DER serialization
+ *  In/Out: outputlen: a pointer to a length integer. Initially, this integer
+ *                     should be set to the length of output. After the call
+ *                     it will be set to the length of the serialization (even
+ *                     if 0 was returned).
+ *  In:     sig:       a pointer to an initialized signature object
+ */
+func EcdsaSignatureSerializeDer(ctx *Context, sig *EcdsaSignature) (int, []byte, error) {
+	serializedSig := make([]C.uchar, 72)
+	outputLen := C.size_t(len(serializedSig))
+
+	result := int(C.secp256k1_ecdsa_signature_serialize_der(ctx.ctx, &serializedSig[0], &outputLen, sig.sig))
+	if result != 1 {
+		return result, []byte(``), errors.New("Unable to serialize this DER signature")
+	}
+	return result, goBytes(serializedSig, C.int(outputLen)), nil
+}
+
+/** Verify an ECDSA signature.
+ *
+ *  Returns: 1: correct signature
+ *           0: incorrect or unparseable signature
+ *  Args:    ctx:       a secp256k1 context object, initialized for verification.
+ *  In:      sig:       the signature being verified (cannot be NULL)
+ *           msg32:     the 32-byte message hash being verified (cannot be NULL)
+ *           pubkey:    pointer to an initialized public key to verify with (cannot be NULL)
+ *
+ * To avoid accepting malleable signatures, only ECDSA signatures in lower-S
+ * form are accepted.
+ *
+ * If you need to accept ECDSA signatures from sources that do not obey this
+ * rule, apply secp256k1_ecdsa_signature_normalize to the signature prior to
+ * validation, but be aware that doing so results in malleable signatures.
+ *
+ * For details, see the comments for that function.
+ */
+func EcdsaVerify(ctx *Context, sig *EcdsaSignature, msg32 []byte, pubkey *PublicKey) int {
+	return int(C.secp256k1_ecdsa_verify(ctx.ctx, sig.sig, cBuf(msg32[:]), pubkey.pk))
+}
+
+/** Create an ECDSA signature.
+ *
+ *  Returns: 1: signature created
+ *           0: the nonce generation function failed, or the private key was invalid.
+ *  Args:    ctx:    pointer to a context object, initialized for signing (cannot be NULL)
+ *  Out:     sig:    pointer to an array where the signature will be placed (cannot be NULL)
+ *  In:      msg32:  the 32-byte message hash being signed (cannot be NULL)
+ *           seckey: pointer to a 32-byte secret key (cannot be NULL)
+ *           noncefp:pointer to a nonce generation function. If NULL, secp256k1_nonce_function_default is used
+ *           ndata:  pointer to arbitrary data used by the nonce generation function (can be NULL)
+ *
+ * The created signature is always in lower-S form. See
+ * secp256k1_ecdsa_signature_normalize for more details.
+ */
+func EcdsaSign(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaSignature, error) {
+	if len(msg32) != 32 {
+		return 0, nil, errors.New("Msg32 must be 32 bytes");
+	}
+	if len(seckey) != 32 {
+		return 0, nil, errors.New("Private key must be 32 bytes");
+	}
+
+	sig := newEcdsaSignature()
+
+	result := int(C.secp256k1_ecdsa_sign(ctx.ctx, sig.sig, cBuf(msg32[:]), cBuf(seckey[:]), nil, nil))
+	if result != 1 {
+		return result, nil, errors.New("Failed to produce signature");
+	}
+	return result, sig, nil
+}
+
+/** Verify an ECDSA secret key.
+ *
+ *  Returns: 1: secret key is valid
+ *           0: secret key is invalid
+ *  Args:    ctx: pointer to a context object (cannot be NULL)
+ *  In:      seckey: pointer to a 32-byte secret key (cannot be NULL)
+ */
+func EcSeckeyVerify(ctx *Context, seckey []byte) int {
+	return int(C.secp256k1_ec_seckey_verify(ctx.ctx, cBuf(seckey[:])))
+}
+
+func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
+	if len(seckey) != 32 {
+		return 0, nil, errors.New("Secret key must be 32 bytes");
+	}
+
+	pk := newPublicKey()
+
+	result := int(C.secp256k1_ec_pubkey_create(ctx.ctx, pk.pk, cBuf(seckey[:])))
+	if result != 1 {
+		return result, nil, errors.New("Failed to produce public key");
+	}
+	return result, pk, nil
+}
+
+func EcPrivkeyNegate(ctx *Context, seckey *[]byte) (int, error) {
+	if len(*seckey) != 32 {
+		return 0, errors.New("Secret key must be 32 bytes")
+	}
+
+
+	result := int(C.secp256k1_ec_privkey_negate(ctx.ctx, (*C.uchar)(unsafe.Pointer(seckey))))
+	if result != 1 {
+		return result, errors.New("Failed to produce negated private key");
+	}
+	return result, nil
+}
+
+func EcPubkeyNegate(ctx *Context, pubkey *PublicKey) (int, error) {
+	result := int(C.secp256k1_ec_pubkey_negate(ctx.ctx, pubkey.pk))
+	if result != 1 {
+		return result, errors.New("Failed to produce negated public key");
+	}
+	return result, nil
+}
+
+func EcPrivkeyTweakAdd(ctx *Context, seckey *[]byte, tweak []byte) (int, error) {
+	if len(*seckey) != 32 {
+		return 0, errors.New("Secret key must be 32 bytes")
+	}
+	if len(tweak) != 32 {
+		return 0, errors.New("Tweak must be 32 bytes")
+	}
+
+	result := int(C.secp256k1_ec_privkey_tweak_add(ctx.ctx, (*C.uchar)(unsafe.Pointer(seckey)), cBuf(tweak)))
+	if result != 1 {
+		return result, errors.New("Failed to tweak private key");
+	}
+	return result, nil
+}
+func EcPrivkeyTweakMul(ctx *Context, seckey *[]byte, tweak []byte) (int, error) {
+	if len(*seckey) != 32 {
+		return 0, errors.New("Secret key must be 32 bytes")
+	}
+	if len(tweak) != 32 {
+		return 0, errors.New("Tweak must be 32 bytes")
+	}
+
+	result := int(C.secp256k1_ec_privkey_tweak_mul(ctx.ctx, (*C.uchar)(unsafe.Pointer(seckey)), cBuf(tweak)))
+	if result != 1 {
+		return result, errors.New("Failed to tweak private key");
+	}
+	return result, nil
+}
+
+func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
+	if len(tweak) != 32 {
+		return 0, errors.New("Tweak must be 32 bytes")
+	}
+
+	result := int(C.secp256k1_ec_pubkey_tweak_add(ctx.ctx, pk.pk, cBuf(tweak)))
+	if result != 1 {
+		return result, errors.New("Failed to tweak public key");
+	}
+	return result, nil
+}
+func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
+	if len(tweak) != 32 {
+		return 0, errors.New("Tweak must be 32 bytes")
+	}
+
+	result := int(C.secp256k1_ec_pubkey_tweak_mul(ctx.ctx, pk.pk, cBuf(tweak)))
+	if result != 1 {
+		return result, errors.New("Failed to tweak public key");
+	}
+	return result, nil
+}
+func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
+	num := len(vPk)
+	vPubkey := make([]*C.secp256k1_pubkey, num)
+	for i := 0; i < num; i++ {
+		vPubkey[i] = vPk[i].pk
+	}
+
+	pkOut := newPublicKey()
+	result := int(C.secp256k1_ec_pubkey_combine(ctx.ctx, pkOut.pk, unsafe.Pointer(&vPubkey), C.size_t(num)))
+	if result != 1 {
+		return result, nil, errors.New("Failed to combine public keys")
+	}
+	return result, pkOut, nil
+}
 func cBuf(goSlice []byte) *C.uchar {
 	return (*C.uchar)(unsafe.Pointer(&goSlice[0]))
 }
