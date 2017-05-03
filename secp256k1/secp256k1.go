@@ -20,6 +20,36 @@ const (
 	/** Flag to pass to secp256k1_ec_pubkey_serialize and secp256k1_ec_privkey_export. */
 	EcCompressed   = uint(C.SECP256K1_EC_COMPRESSED)
 	EcUncompressed = uint(C.SECP256K1_EC_UNCOMPRESSED)
+
+	ErrorEcdh             string = "Unable to do ECDH"
+	ErrorPublicKeyCreate  string = "Unable to produce public key"
+	ErrorPublicKeyCombine string = "Unable to combine public keys"
+
+	ErrorTweakSize      string = "Tweak must be exactly 32 bytes"
+	ErrorMsg32Size      string = "Message hash must be exactly 32 bytes"
+	ErrorPrivateKeySize string = "Private key must be exactly 32 bytes"
+
+	ErrorTweakingPublicKey  string = "Unable to tweak this public key"
+	ErrorTweakingPrivateKey string = "Unable to tweak this private key"
+
+	ErrorProducingSignature string = "Unable to produce signature"
+
+	ErrorCompactSigSize      string = "Compact signature must be exactly 64 bytes"
+	ErrorCompactSigParse     string = "Unable to parse this compact signature"
+	ErrorCompactSigSerialize string = "Unable to serialize this compact signature"
+
+	ErrorDerSigParse     string = "Unable to parse this DER signature"
+	ErrorDerSigSerialize string = "Unable to serialize this DER signature"
+
+	ErrorRecoverableSigParse     string = "Unable to parse this recoverable signature"
+	ErrorRecoverableSigSerialize string = "Unable to serialize this recoverable signature"
+	ErrorRecoverableSigConvert   string = "Unable to convert recoverable signature to plain"
+
+	ErrorPublicKeyParse     string = "Unable to parse this public key"
+	ErrorPublicKeySerialize string = "Unable to serialize this public key"
+
+	ErrorNegatePrivateKey string = "Unable to negate private key"
+	ErrorNegatePublicKey  string = "Unable to negate public key"
 )
 
 type Context struct {
@@ -122,7 +152,7 @@ func EcPubkeyParse(ctx *Context, publicKey []byte) (int, *PublicKey, error) {
 
 	result := int(C.secp256k1_ec_pubkey_parse(ctx.ctx, pk.pk, cBuf(publicKey), C.size_t(len(publicKey))))
 	if result != 1 {
-		return result, nil, errors.New("Unable to parse this public key")
+		return result, nil, errors.New(ErrorPublicKeyParse)
 	}
 	return result, pk, nil
 }
@@ -155,7 +185,7 @@ func EcPubkeySerialize(ctx *Context, publicKey *PublicKey, flags uint) (int, []b
 
 	result := int(C.secp256k1_ec_pubkey_serialize(ctx.ctx, &output[0], &outputLen, publicKey.pk, C.uint(flags)))
 	if result != 1 {
-		return result, []byte(``), errors.New("Unable to serialize this public key")
+		return result, []byte(``), errors.New(ErrorPublicKeySerialize)
 	}
 	return result, goBytes(output, C.int(outputLen)), nil
 }
@@ -177,7 +207,7 @@ func EcPubkeySerialize(ctx *Context, publicKey *PublicKey, flags uint) (int, []b
  */
 func EcdsaSignatureParseCompact(ctx *Context, signature []byte) (int, *EcdsaSignature, error) {
 	if len(signature) != 64 {
-		return 0, nil, errors.New("Compact signature must be 64 bytes")
+		return 0, nil, errors.New(ErrorCompactSigSize)
 	}
 
 	sig := newEcdsaSignature()
@@ -186,7 +216,7 @@ func EcdsaSignatureParseCompact(ctx *Context, signature []byte) (int, *EcdsaSign
 		(*C.uchar)(unsafe.Pointer(&signature[0])),
 	))
 	if result != 1 {
-		return result, nil, errors.New("Unable to parse this compact signature")
+		return result, nil, errors.New(ErrorCompactSigParse)
 	}
 	return result, sig, nil
 }
@@ -206,7 +236,7 @@ func EcdsaSignatureSerializeCompact(ctx *Context, sig *EcdsaSignature) (int, []b
 
 	result := int(C.secp256k1_ecdsa_signature_serialize_compact(ctx.ctx, &output[0], sig.sig))
 	if result != 1 {
-		return result, []byte(``), errors.New("Unable to serialize this compact signature")
+		return result, []byte(``), errors.New(ErrorCompactSigParse)
 	}
 	return result, goBytes(output, C.int(outputLen)), nil
 }
@@ -234,7 +264,7 @@ func EcdsaSignatureParseDer(ctx *Context, signature []byte) (int, *EcdsaSignatur
 		(C.size_t)(len(signature))))
 
 	if result != 1 {
-		return result, nil, errors.New("Unable to parse this DER signature")
+		return result, nil, errors.New(ErrorDerSigParse)
 	}
 	return result, sig, nil
 }
@@ -256,7 +286,7 @@ func EcdsaSignatureSerializeDer(ctx *Context, sig *EcdsaSignature) (int, []byte,
 
 	result := int(C.secp256k1_ecdsa_signature_serialize_der(ctx.ctx, &serializedSig[0], &outputLen, sig.sig))
 	if result != 1 {
-		return result, []byte(``), errors.New("Unable to serialize this DER signature")
+		return result, []byte(``), errors.New(ErrorDerSigSerialize)
 	}
 	return result, goBytes(serializedSig, C.int(outputLen)), nil
 }
@@ -299,10 +329,10 @@ func EcdsaVerify(ctx *Context, sig *EcdsaSignature, msg32 []byte, pubkey *Public
  */
 func EcdsaSign(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaSignature, error) {
 	if len(msg32) != 32 {
-		return 0, nil, errors.New("Msg32 must be 32 bytes")
+		return 0, nil, errors.New(ErrorMsg32Size)
 	}
 	if len(seckey) != 32 {
-		return 0, nil, errors.New("Private key must be 32 bytes")
+		return 0, nil, errors.New(ErrorPrivateKeySize)
 	}
 
 	signature := newEcdsaSignature()
@@ -310,7 +340,7 @@ func EcdsaSign(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaSignature,
 		cBuf(msg32[:]), cBuf(seckey[:]), nil, nil))
 
 	if result != 1 {
-		return result, nil, errors.New("Failed to produce signature")
+		return result, nil, errors.New(ErrorProducingSignature)
 	}
 
 	return result, signature, nil
@@ -337,14 +367,14 @@ func EcSeckeyVerify(ctx *Context, seckey []byte) int {
  */
 func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
 	if len(seckey) != 32 {
-		return 0, nil, errors.New("Secret key must be 32 bytes")
+		return 0, nil, errors.New(ErrorPrivateKeySize)
 	}
 
 	pk := newPublicKey()
 
 	result := int(C.secp256k1_ec_pubkey_create(ctx.ctx, pk.pk, cBuf(seckey[:])))
 	if result != 1 {
-		return result, nil, errors.New("Failed to produce public key")
+		return result, nil, errors.New(ErrorPublicKeyCreate)
 	}
 	return result, pk, nil
 }
@@ -357,12 +387,12 @@ func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
  */
 func EcPrivkeyNegate(ctx *Context, seckey *[]byte) (int, error) {
 	if len(*seckey) != 32 {
-		return 0, errors.New("Secret key must be 32 bytes")
+		return 0, errors.New(ErrorPrivateKeySize)
 	}
 
 	result := int(C.secp256k1_ec_privkey_negate(ctx.ctx, (*C.uchar)(unsafe.Pointer(seckey))))
 	if result != 1 {
-		return result, errors.New("Failed to produce negated private key")
+		return result, errors.New(ErrorNegatePrivateKey)
 	}
 	return result, nil
 }
@@ -376,7 +406,7 @@ func EcPrivkeyNegate(ctx *Context, seckey *[]byte) (int, error) {
 func EcPubkeyNegate(ctx *Context, pubkey *PublicKey) (int, error) {
 	result := int(C.secp256k1_ec_pubkey_negate(ctx.ctx, pubkey.pk))
 	if result != 1 {
-		return result, errors.New("Failed to produce negated public key")
+		return result, errors.New(ErrorNegatePublicKey)
 	}
 	return result, nil
 }
@@ -392,15 +422,15 @@ func EcPubkeyNegate(ctx *Context, pubkey *PublicKey) (int, error) {
  */
 func EcPrivkeyTweakAdd(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	if len(seckey) != 32 {
-		return 0, errors.New("Secret key must be 32 bytes")
+		return 0, errors.New(ErrorPrivateKeySize)
 	}
 	if len(tweak) != 32 {
-		return 0, errors.New("Tweak must be 32 bytes")
+		return 0, errors.New(ErrorTweakSize)
 	}
 
 	result := int(C.secp256k1_ec_privkey_tweak_add(ctx.ctx, (*C.uchar)(unsafe.Pointer(&seckey[0])), cBuf(tweak[:])))
 	if result != 1 {
-		return result, errors.New("Failed to tweak private key")
+		return result, errors.New(ErrorTweakingPrivateKey)
 	}
 	return result, nil
 }
@@ -417,15 +447,15 @@ func EcPrivkeyTweakAdd(ctx *Context, seckey []byte, tweak []byte) (int, error) {
  */
 func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	if len(seckey) != 32 {
-		return 0, errors.New("Secret key must be 32 bytes")
+		return 0, errors.New(ErrorPrivateKeySize)
 	}
 	if len(tweak) != 32 {
-		return 0, errors.New("Tweak must be 32 bytes")
+		return 0, errors.New(ErrorTweakSize)
 	}
 
 	result := int(C.secp256k1_ec_privkey_tweak_mul(ctx.ctx, (*C.uchar)(unsafe.Pointer(&seckey[0])), cBuf(tweak[:])))
 	if result != 1 {
-		return result, errors.New("Failed to tweak private key")
+		return result, errors.New(ErrorTweakingPrivateKey)
 	}
 	return result, nil
 }
@@ -439,12 +469,12 @@ func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
  */
 func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	if len(tweak) != 32 {
-		return 0, errors.New("Tweak must be 32 bytes")
+		return 0, errors.New(ErrorTweakSize)
 	}
 
 	result := int(C.secp256k1_ec_pubkey_tweak_add(ctx.ctx, pk.pk, cBuf(tweak)))
 	if result != 1 {
-		return result, errors.New("Failed to tweak public key")
+		return result, errors.New(ErrorTweakingPublicKey)
 	}
 	return result, nil
 }
@@ -459,12 +489,12 @@ func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
  */
 func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	if len(tweak) != 32 {
-		return 0, errors.New("Tweak must be 32 bytes")
+		return 0, errors.New(ErrorTweakSize)
 	}
 
 	result := int(C.secp256k1_ec_pubkey_tweak_mul(ctx.ctx, pk.pk, cBuf(tweak)))
 	if result != 1 {
-		return result, errors.New("Failed to tweak public key")
+		return result, errors.New(ErrorTweakingPublicKey)
 	}
 	return result, nil
 }
@@ -488,7 +518,7 @@ func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
 	pkOut := newPublicKey()
 	result := int(C.secp256k1_ec_pubkey_combine(ctx.ctx, pkOut.pk, unsafe.Pointer(&vPubkey), C.size_t(num)))
 	if result != 1 {
-		return result, nil, errors.New("Failed to combine public keys")
+		return result, nil, errors.New(ErrorPublicKeyCombine)
 	}
 	return result, pkOut, nil
 }
@@ -507,7 +537,7 @@ func Ecdh(ctx *Context, pubKey *PublicKey, privKey []byte) (int, []byte, error) 
 	secret := make([]byte, 32)
 	result := int(C.secp256k1_ecdh(ctx.ctx, cBuf(secret[:]), pubKey.pk, cBuf(privKey[:])))
 	if result != 1 {
-		return result, []byte(``), errors.New("Failed to do ECDH")
+		return result, []byte(``), errors.New(ErrorEcdh)
 	}
 	return result, secret, nil
 }
@@ -522,7 +552,7 @@ func Ecdh(ctx *Context, pubKey *PublicKey, privKey []byte) (int, []byte, error) 
  */
 func EcdsaRecoverableSignatureParseCompact(ctx *Context, signature []byte, recid int) (int, *EcdsaRecoverableSignature, error) {
 	if len(signature) != 64 {
-		return 0, nil, errors.New("Compact signature must be 64 bytes")
+		return 0, nil, errors.New(ErrorCompactSigSize)
 	}
 
 	sig := newEcdsaRecoverableSignature()
@@ -531,7 +561,7 @@ func EcdsaRecoverableSignatureParseCompact(ctx *Context, signature []byte, recid
 		(*C.uchar)(unsafe.Pointer(&signature[0])), (C.int(recid))))
 
 	if result != 1 {
-		return result, nil, errors.New("Unable to parse this recoverable signature")
+		return result, nil, errors.New(ErrorRecoverableSigParse)
 	}
 	return result, sig, nil
 }
@@ -551,7 +581,7 @@ func EcdsaRecoverableSignatureSerializeCompact(ctx *Context, sig *EcdsaRecoverab
 	r := (C.int)(recid)
 	result := int(C.secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx.ctx, &output[0], &r, sig.sig))
 	if result != 1 {
-		return result, []byte(``), errors.New("Unable to serialize this recoverable signature")
+		return result, []byte(``), errors.New(ErrorRecoverableSigSerialize)
 	}
 	return result, goBytes(output, C.int(outputLen)), nil
 }
@@ -566,7 +596,7 @@ func EcdsaRecoverableSignatureConvert(ctx *Context, sig *EcdsaRecoverableSignatu
 	sigOut := newEcdsaSignature()
 	result := int(C.secp256k1_ecdsa_recoverable_signature_convert(ctx.ctx, sigOut.sig, sig.sig))
 	if result != 1 {
-		return result, nil, errors.New("Unable to serialize this recoverable signature")
+		return result, nil, errors.New(ErrorRecoverableSigConvert)
 	}
 	return result, sigOut, nil
 }
@@ -584,10 +614,10 @@ func EcdsaRecoverableSignatureConvert(ctx *Context, sig *EcdsaRecoverableSignatu
  */
 func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaRecoverableSignature, error) {
 	if len(msg32) != 32 {
-		return 0, nil, errors.New("Message hash must be exactly 32 bytes")
+		return 0, nil, errors.New(ErrorMsg32Size)
 	}
 	if len(seckey) != 32 {
-		return 0, nil, errors.New("Private key must be exactly 32 bytes")
+		return 0, nil, errors.New(ErrorPrivateKeySize)
 	}
 
 	recoverable := newEcdsaRecoverableSignature()
@@ -610,7 +640,7 @@ func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *Ecds
  */
 func EcdsaRecover(ctx *Context, sig *EcdsaRecoverableSignature, msg32 []byte) (int, *PublicKey, error) {
 	if len(msg32) != 32 {
-		return 0, nil, errors.New("Message hash must be exactly 32 bytes")
+		return 0, nil, errors.New(ErrorMsg32Size)
 	}
 	recovered := newPublicKey()
 	result := int(C.secp256k1_ecdsa_recover(ctx.ctx, recovered.pk, sig.sig, cBuf(msg32)))

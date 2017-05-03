@@ -1,22 +1,22 @@
 package secp256k1
 
 import (
-	"testing"
 	"encoding/hex"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
+	"testing"
 )
 
 type EcdsaTestCase struct {
 	PrivateKey string `yaml:"privkey"`
-	Message string `yaml:"msg"`
-	Sig string `yaml:"sig"`
+	Message    string `yaml:"msg"`
+	Sig        string `yaml:"sig"`
 }
 
 func (t *EcdsaTestCase) GetPrivateKey() []byte {
 	private, err := hex.DecodeString(t.PrivateKey)
 	if err != nil {
-		panic("Invalid private key");
+		panic("Invalid private key")
 	}
 	return private
 }
@@ -32,7 +32,7 @@ func (t *EcdsaTestCase) GetPublicKey(ctx *Context) *PublicKey {
 func (t *EcdsaTestCase) GetMessage() []byte {
 	msg, err := hex.DecodeString(t.Message)
 	if err != nil {
-		panic("Invalid msg32");
+		panic("Invalid msg32")
 	}
 	return msg
 }
@@ -40,7 +40,7 @@ func (t *EcdsaTestCase) GetMessage() []byte {
 func (t *EcdsaTestCase) GetSigBytes() []byte {
 	sig, err := hex.DecodeString(removeSigHash(t.Sig))
 	if err != nil {
-		panic("Invalid msg32");
+		panic("Invalid msg32")
 	}
 	return sig
 }
@@ -64,7 +64,6 @@ func GetEcdsaFixtures() []EcdsaTestCase {
 	}
 	return testCase
 }
-
 
 func Test_Ecdsa_Verify(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)

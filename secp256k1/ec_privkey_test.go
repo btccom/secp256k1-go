@@ -1,22 +1,22 @@
 package secp256k1
 
 import (
-	"gopkg.in/yaml.v2"
 	"encoding/hex"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
+	"testing"
 )
 
 type PrivkeyTweakAddTestCase struct {
 	PrivateKey string `yaml:"privkey"`
-	Tweak string `yaml:"tweak"`
-	Tweaked string `yaml:"tweaked"`
+	Tweak      string `yaml:"tweak"`
+	Tweaked    string `yaml:"tweaked"`
 }
 
 func (t *PrivkeyTweakAddTestCase) GetPrivateKey() []byte {
 	public, err := hex.DecodeString(t.PrivateKey)
 	if err != nil {
-		panic("Invalid private key");
+		panic("Invalid private key")
 	}
 	return public
 }
@@ -58,7 +58,7 @@ func TestPrivkeyTweakAddFixtures(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		fixture := fixtures[i]
 		priv := fixture.GetPrivateKey()
-		tweak := fixture.GetTweak();
+		tweak := fixture.GetTweak()
 
 		r, err := EcPrivkeyTweakAdd(ctx, priv, tweak)
 		spOK(t, r, err)
@@ -69,14 +69,14 @@ func TestPrivkeyTweakAddFixtures(t *testing.T) {
 
 type PrivkeyTweakMulTestCase struct {
 	PrivateKey string `yaml:"privkey"`
-	Tweak string `yaml:"tweak"`
-	Tweaked string `yaml:"tweaked"`
+	Tweak      string `yaml:"tweak"`
+	Tweaked    string `yaml:"tweaked"`
 }
 
 func (t *PrivkeyTweakMulTestCase) GetPrivateKey() []byte {
 	public, err := hex.DecodeString(t.PrivateKey)
 	if err != nil {
-		panic("Invalid private key");
+		panic("Invalid private key")
 	}
 	return public
 }
@@ -118,11 +118,27 @@ func TestPrivkeyTweakMulFixtures(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		fixture := fixtures[i]
 		priv := fixture.GetPrivateKey()
-		tweak := fixture.GetTweak();
+		tweak := fixture.GetTweak()
 
 		r, err := EcPrivkeyTweakMul(ctx, priv, tweak)
 		spOK(t, r, err)
 
 		assert.Equal(t, fixture.GetTweaked(), priv)
+	}
+}
+
+func TestPrivkeyVerifyFixtures(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	fixtures := GetPrivkeyTweakMulFixtures()
+
+	for i := 0; i < 1; i++ {
+		fixture := fixtures[i]
+		priv := fixture.GetPrivateKey()
+		result := EcSeckeyVerify(ctx, priv)
+		assert.Equal(t, 1, result)
 	}
 }

@@ -1,22 +1,22 @@
 package secp256k1
 
 import (
-	"gopkg.in/yaml.v2"
 	"encoding/hex"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
+	"testing"
 )
 
 type PubkeyCreateTestCase struct {
-	PrivateKey string `yaml:"seckey"`
-	CompressedKey string `yaml:"compressed"`
+	PrivateKey      string `yaml:"seckey"`
+	CompressedKey   string `yaml:"compressed"`
 	UncompressedKey string `yaml:"pubkey"`
 }
 
 func (t *PubkeyCreateTestCase) GetPrivateKey() []byte {
 	private, err := hex.DecodeString(t.PrivateKey)
 	if err != nil {
-		panic("Invalid private key");
+		panic("Invalid private key")
 	}
 	return private
 }
@@ -88,14 +88,14 @@ func TestPubkeyParseFixtures(t *testing.T) {
 
 type PubkeyTweakAddTestCase struct {
 	PublicKey string `yaml:"publicKey"`
-	Tweak string `yaml:"tweak"`
-	Tweaked string `yaml:"tweaked"`
+	Tweak     string `yaml:"tweak"`
+	Tweaked   string `yaml:"tweaked"`
 }
 
 func (t *PubkeyTweakAddTestCase) GetPublicKeyBytes() []byte {
 	public, err := hex.DecodeString(t.PublicKey)
 	if err != nil {
-		panic("Invalid private key");
+		panic("Invalid private key")
 	}
 	return public
 }
@@ -145,7 +145,7 @@ func TestPubkeyTweakAddFixtures(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		fixture := fixtures[i]
 		pubkey := fixture.GetPublicKey(ctx)
-		tweak := fixture.GetTweak();
+		tweak := fixture.GetTweak()
 
 		r, err := EcPubkeyTweakAdd(ctx, pubkey, tweak)
 		spOK(t, r, err)
@@ -157,18 +157,16 @@ func TestPubkeyTweakAddFixtures(t *testing.T) {
 	}
 }
 
-
-
 type PubkeyTweakMulTestCase struct {
 	PublicKey string `yaml:"publicKey"`
-	Tweak string `yaml:"tweak"`
-	Tweaked string `yaml:"tweaked"`
+	Tweak     string `yaml:"tweak"`
+	Tweaked   string `yaml:"tweaked"`
 }
 
 func (t *PubkeyTweakMulTestCase) GetPublicKeyBytes() []byte {
 	public, err := hex.DecodeString(t.PublicKey)
 	if err != nil {
-		panic("Invalid private key");
+		panic("Invalid private key")
 	}
 	return public
 }
@@ -218,7 +216,7 @@ func TestPubkeyTweakMulFixtures(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		fixture := fixtures[i]
 		pubkey := fixture.GetPublicKey(ctx)
-		tweak := fixture.GetTweak();
+		tweak := fixture.GetTweak()
 
 		r, err := EcPubkeyTweakMul(ctx, pubkey, tweak)
 		spOK(t, r, err)
@@ -228,4 +226,46 @@ func TestPubkeyTweakMulFixtures(t *testing.T) {
 
 		assert.Equal(t, fixture.GetTweaked(), serialized)
 	}
+}
+
+func TestPubkeyMustBeValid(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	numTests := 1
+
+	badKey, err := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141")
+	if err != nil {
+		panic(err)
+	}
+
+	tests := make([][]byte, numTests)
+	tests[0] = badKey
+
+	for i := 0; i < numTests; i++ {
+		r, pubkey, err := EcPubkeyCreate(ctx, tests[i])
+		assert.Error(t, err)
+		assert.Equal(t, 0, r)
+		assert.Nil(t, pubkey)
+		assert.Equal(t, ErrorPublicKeyCreate, err.Error())
+	}
+
+}
+
+
+func TestPubkeyCreateChecksSize(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	badKey, _ := hex.DecodeString("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+	r, pubkey, err := EcPubkeyCreate(ctx, badKey)
+	assert.Error(t, err)
+	assert.Equal(t, 0, r)
+	assert.Nil(t, pubkey)
+	assert.Equal(t, ErrorPrivateKeySize, err.Error())
 }
