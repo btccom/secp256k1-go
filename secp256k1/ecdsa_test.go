@@ -2,25 +2,10 @@ package secp256k1
 
 import (
 	"testing"
-	"strings"
-	"io/ioutil"
 	"encoding/hex"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
-
-
-func readFile(filename string) []byte {
-	source, err := ioutil.ReadFile(filename)
-	if err != nil {
-		panic(err)
-	}
-	return source
-}
-
-func removeSigHash(sig string) string {
-	return strings.TrimSuffix(sig, "01")
-}
 
 type EcdsaTestCase struct {
 	PrivateKey string `yaml:"privkey"`

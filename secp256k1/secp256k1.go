@@ -9,6 +9,7 @@ import "C"
 import (
 	"github.com/pkg/errors"
 	"unsafe"
+	//"log"
 )
 
 const (
@@ -360,29 +361,29 @@ func EcPubkeyNegate(ctx *Context, pubkey *PublicKey) (int, error) {
 	return result, nil
 }
 
-func EcPrivkeyTweakAdd(ctx *Context, seckey *[]byte, tweak []byte) (int, error) {
-	if len(*seckey) != 32 {
+func EcPrivkeyTweakAdd(ctx *Context, seckey []byte, tweak []byte) (int, error) {
+	if len(seckey) != 32 {
 		return 0, errors.New("Secret key must be 32 bytes")
 	}
 	if len(tweak) != 32 {
 		return 0, errors.New("Tweak must be 32 bytes")
 	}
 
-	result := int(C.secp256k1_ec_privkey_tweak_add(ctx.ctx, (*C.uchar)(unsafe.Pointer(seckey)), cBuf(tweak)))
+	result := int(C.secp256k1_ec_privkey_tweak_add(ctx.ctx, (*C.uchar)(unsafe.Pointer(&seckey[0])), cBuf(tweak[:])))
 	if result != 1 {
 		return result, errors.New("Failed to tweak private key")
 	}
 	return result, nil
 }
-func EcPrivkeyTweakMul(ctx *Context, seckey *[]byte, tweak []byte) (int, error) {
-	if len(*seckey) != 32 {
+func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
+	if len(seckey) != 32 {
 		return 0, errors.New("Secret key must be 32 bytes")
 	}
 	if len(tweak) != 32 {
 		return 0, errors.New("Tweak must be 32 bytes")
 	}
 
-	result := int(C.secp256k1_ec_privkey_tweak_mul(ctx.ctx, (*C.uchar)(unsafe.Pointer(seckey)), cBuf(tweak)))
+	result := int(C.secp256k1_ec_privkey_tweak_mul(ctx.ctx, (*C.uchar)(unsafe.Pointer(&seckey[0])), cBuf(tweak[:])))
 	if result != 1 {
 		return result, errors.New("Failed to tweak private key")
 	}
