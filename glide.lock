@@ -1,8 +1,10 @@
-hash: b7367269b64b3e3af919f7cbdbea9135470a8bcd92f6659efc4d3ab97e0c7f30
-updated: 2017-05-02T15:36:31.054564848+02:00
+hash: 25b83c2f505bb9703ae8404893ee232b16b4cd673c4964a96c28be623df5a734
+updated: 2017-05-03T11:01:53.259321951+02:00
 imports:
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: gopkg.in/yaml.v2
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 testImports:
 - name: github.com/davecgh/go-spew
   version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
