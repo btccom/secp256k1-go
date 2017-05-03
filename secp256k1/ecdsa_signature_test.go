@@ -1,9 +1,9 @@
 package secp256k1
 
 import (
+	"encoding/hex"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"encoding/hex"
 )
 
 func TestSignatureParseDerFixtures(t *testing.T) {

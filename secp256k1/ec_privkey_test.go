@@ -173,7 +173,6 @@ func TestPrivkeyTweakMulChecksTweakSize(t *testing.T) {
 	assert.Equal(t, ErrorTweakSize, err.Error())
 }
 
-
 func TestPrivkeyTweakAddChecksPrivkeySize(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {

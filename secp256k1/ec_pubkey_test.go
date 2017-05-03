@@ -254,7 +254,6 @@ func TestPubkeyMustBeValid(t *testing.T) {
 
 }
 
-
 func TestPubkeyCreateChecksSize(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
@@ -269,8 +268,6 @@ func TestPubkeyCreateChecksSize(t *testing.T) {
 	assert.Nil(t, pubkey)
 	assert.Equal(t, ErrorPrivateKeySize, err.Error())
 }
-
-
 
 func TestPubkeyTweakAddChecksTweakSize(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
