@@ -91,7 +91,6 @@ func Test_Ecdsa_Sign(t *testing.T) {
 	}
 
 	fixtures := GetEcdsaFixtures()
-
 	for i := 0; i < len(fixtures); i++ {
 		testCase := fixtures[i]
 		msg32 := testCase.GetMessage()
@@ -99,6 +98,7 @@ func Test_Ecdsa_Sign(t *testing.T) {
 		sigb := testCase.GetSigBytes()
 
 		r, sig, err := EcdsaSign(ctx, msg32, priv)
+
 		spOK(t, r, err)
 
 		r, serialized, err := EcdsaSignatureSerializeDer(ctx, sig)
