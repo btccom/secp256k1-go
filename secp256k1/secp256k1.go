@@ -32,7 +32,8 @@ const (
 	ErrorTweakingPublicKey  string = "Unable to tweak this public key"
 	ErrorTweakingPrivateKey string = "Unable to tweak this private key"
 
-	ErrorProducingSignature string = "Unable to produce signature"
+	ErrorProducingSignature            string = "Unable to produce signature"
+	ErrorProducingRecoverableSignature string = "Unable to produce recoverable signature"
 
 	ErrorCompactSigSize      string = "Compact signature must be exactly 64 bytes"
 	ErrorCompactSigParse     string = "Unable to parse this compact signature"
@@ -43,7 +44,7 @@ const (
 
 	ErrorRecoverableSigParse     string = "Unable to parse this recoverable signature"
 	ErrorRecoverableSigSerialize string = "Unable to serialize this recoverable signature"
-	ErrorRecoverableSigConvert   string = "Unable to convert recoverable signature to plain"
+	ErrorRecoveryFailed          string = "Failed to recover public key"
 
 	ErrorPublicKeyParse     string = "Unable to parse this public key"
 	ErrorPublicKeySerialize string = "Unable to serialize this public key"
@@ -574,16 +575,13 @@ func EcdsaRecoverableSignatureParseCompact(ctx *Context, signature []byte, recid
  *        recid:    a pointer to an integer to hold the recovery id (can be NULL).
  *  In:   sig:      a pointer to an initialized signature object (cannot be NULL)
  */
-func EcdsaRecoverableSignatureSerializeCompact(ctx *Context, sig *EcdsaRecoverableSignature, recid int) (int, []byte, error) {
+func EcdsaRecoverableSignatureSerializeCompact(ctx *Context, sig *EcdsaRecoverableSignature) (int, []byte, int, error) {
 	output := make([]C.uchar, 64)
 	outputLen := C.size_t(64)
 
-	r := (C.int)(recid)
+	r := C.int(0)
 	result := int(C.secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx.ctx, &output[0], &r, sig.sig))
-	if result != 1 {
-		return result, []byte(``), errors.New(ErrorRecoverableSigSerialize)
-	}
-	return result, goBytes(output, C.int(outputLen)), nil
+	return result, goBytes(output, C.int(outputLen)), int(r), nil
 }
 
 /** Convert a recoverable signature into a normal signature.
@@ -595,9 +593,6 @@ func EcdsaRecoverableSignatureSerializeCompact(ctx *Context, sig *EcdsaRecoverab
 func EcdsaRecoverableSignatureConvert(ctx *Context, sig *EcdsaRecoverableSignature) (int, *EcdsaSignature, error) {
 	sigOut := newEcdsaSignature()
 	result := int(C.secp256k1_ecdsa_recoverable_signature_convert(ctx.ctx, sigOut.sig, sig.sig))
-	if result != 1 {
-		return result, nil, errors.New(ErrorRecoverableSigConvert)
-	}
 	return result, sigOut, nil
 }
 
@@ -623,7 +618,7 @@ func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *Ecds
 	recoverable := newEcdsaRecoverableSignature()
 	result := int(C.secp256k1_ecdsa_sign_recoverable(ctx.ctx, recoverable.sig, cBuf(msg32), cBuf(seckey), nil, nil))
 	if result != 1 {
-		return result, nil, errors.New("Failed to produce recoverable signature")
+		return result, nil, errors.New(ErrorProducingRecoverableSignature)
 	}
 	return result, recoverable, nil
 
@@ -645,7 +640,7 @@ func EcdsaRecover(ctx *Context, sig *EcdsaRecoverableSignature, msg32 []byte) (i
 	recovered := newPublicKey()
 	result := int(C.secp256k1_ecdsa_recover(ctx.ctx, recovered.pk, sig.sig, cBuf(msg32)))
 	if result != 1 {
-		return result, nil, errors.New("Failed to recover public key")
+		return result, nil, errors.New(ErrorRecoveryFailed)
 	}
 	return result, recovered, nil
 }
