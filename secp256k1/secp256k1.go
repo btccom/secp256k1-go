@@ -327,6 +327,14 @@ func EcSeckeyVerify(ctx *Context, seckey []byte) int {
 	return int(C.secp256k1_ec_seckey_verify(ctx.ctx, cBuf(seckey[:])))
 }
 
+/** Compute the public key for a secret key.
+ *
+ *  Returns: 1: secret was valid, public key stores
+ *           0: secret was invalid, try again
+ *  Args:   ctx:        pointer to a context object, initialized for signing (cannot be NULL)
+ *  Out:    pubkey:     pointer to the created public key (cannot be NULL)
+ *  In:     seckey:     pointer to a 32-byte private key (cannot be NULL)
+ */
 func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
 	if len(seckey) != 32 {
 		return 0, nil, errors.New("Secret key must be 32 bytes")
@@ -341,6 +349,12 @@ func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
 	return result, pk, nil
 }
 
+/** Negates a private key in place.
+ *
+ *  Returns: 1 always
+ *  Args:   ctx:        pointer to a context object
+ *  In/Out: pubkey:     pointer to the public key to be negated (cannot be NULL)
+ */
 func EcPrivkeyNegate(ctx *Context, seckey *[]byte) (int, error) {
 	if len(*seckey) != 32 {
 		return 0, errors.New("Secret key must be 32 bytes")
@@ -353,6 +367,12 @@ func EcPrivkeyNegate(ctx *Context, seckey *[]byte) (int, error) {
 	return result, nil
 }
 
+/** Negates a public key in place.
+ *
+ *  Returns: 1 always
+ *  Args:   ctx:        pointer to a context object
+ *  In/Out: pubkey:     pointer to the public key to be negated (cannot be NULL)
+ */
 func EcPubkeyNegate(ctx *Context, pubkey *PublicKey) (int, error) {
 	result := int(C.secp256k1_ec_pubkey_negate(ctx.ctx, pubkey.pk))
 	if result != 1 {
@@ -361,6 +381,15 @@ func EcPubkeyNegate(ctx *Context, pubkey *PublicKey) (int, error) {
 	return result, nil
 }
 
+/** Tweak a private key by adding tweak to it.
+ * Returns: 0 if the tweak was out of range (chance of around 1 in 2^128 for
+ *          uniformly random 32-byte arrays, or if the resulting private key
+ *          would be invalid (only when the tweak is the complement of the
+ *          private key). 1 otherwise.
+ * Args:    ctx:    pointer to a context object (cannot be NULL).
+ * In/Out:  seckey: pointer to a 32-byte private key.
+ * In:      tweak:  pointer to a 32-byte tweak.
+ */
 func EcPrivkeyTweakAdd(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	if len(seckey) != 32 {
 		return 0, errors.New("Secret key must be 32 bytes")
@@ -375,6 +404,17 @@ func EcPrivkeyTweakAdd(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	}
 	return result, nil
 }
+
+/** Tweak a public key by adding tweak times the generator to it.
+ * Returns: 0 if the tweak was out of range (chance of around 1 in 2^128 for
+ *          uniformly random 32-byte arrays, or if the resulting public key
+ *          would be invalid (only when the tweak is the complement of the
+ *          corresponding private key). 1 otherwise.
+ * Args:    ctx:    pointer to a context object initialized for validation
+ *                  (cannot be NULL).
+ * In/Out:  pubkey: pointer to a public key object.
+ * In:      tweak:  pointer to a 32-byte tweak.
+ */
 func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	if len(seckey) != 32 {
 		return 0, errors.New("Secret key must be 32 bytes")
@@ -390,6 +430,13 @@ func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	return result, nil
 }
 
+/** Tweak a private key by multiplying it by a tweak.
+ * Returns: 0 if the tweak was out of range (chance of around 1 in 2^128 for
+ *          uniformly random 32-byte arrays, or equal to zero. 1 otherwise.
+ * Args:   ctx:    pointer to a context object (cannot be NULL).
+ * In/Out: seckey: pointer to a 32-byte private key.
+ * In:     tweak:  pointer to a 32-byte tweak.
+ */
 func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	if len(tweak) != 32 {
 		return 0, errors.New("Tweak must be 32 bytes")
@@ -401,6 +448,15 @@ func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	}
 	return result, nil
 }
+
+/** Tweak a public key by multiplying it by a tweak value.
+ * Returns: 0 if the tweak was out of range (chance of around 1 in 2^128 for
+ *          uniformly random 32-byte arrays, or equal to zero. 1 otherwise.
+ * Args:    ctx:    pointer to a context object initialized for validation
+ *                 (cannot be NULL).
+ * In/Out:  pubkey: pointer to a public key obkect.
+ * In:      tweak:  pointer to a 32-byte tweak.
+ */
 func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	if len(tweak) != 32 {
 		return 0, errors.New("Tweak must be 32 bytes")
@@ -412,6 +468,16 @@ func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	}
 	return result, nil
 }
+
+/** Add a number of public keys together.
+ *  Returns: 1: the sum of the public keys is valid.
+ *           0: the sum of the public keys is not valid.
+ *  Args:   ctx:        pointer to a context object
+ *  Out:    out:        pointer to a public key object for placing the resulting public key
+ *                      (cannot be NULL)
+ *  In:     ins:        pointer to array of pointers to public keys (cannot be NULL)
+ *          n:          the number of public keys to add together (must be at least 1)
+ */
 func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
 	num := len(vPk)
 	vPubkey := make([]*C.secp256k1_pubkey, num)
@@ -505,6 +571,17 @@ func EcdsaRecoverableSignatureConvert(ctx *Context, sig *EcdsaRecoverableSignatu
 	return result, sigOut, nil
 }
 
+/** Create a recoverable ECDSA signature.
+ *
+ *  Returns: 1: signature created
+ *           0: the nonce generation function failed, or the private key was invalid.
+ *  Args:    ctx:    pointer to a context object, initialized for signing (cannot be NULL)
+ *  Out:     sig:    pointer to an array where the signature will be placed (cannot be NULL)
+ *  In:      msg32:  the 32-byte message hash being signed (cannot be NULL)
+ *           seckey: pointer to a 32-byte secret key (cannot be NULL)
+ *           noncefp:pointer to a nonce generation function. If NULL, secp256k1_nonce_function_default is used
+ *           ndata:  pointer to arbitrary data used by the nonce generation function (can be NULL)
+ */
 func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaRecoverableSignature, error) {
 	if len(msg32) != 32 {
 		return 0, nil, errors.New("Message hash must be exactly 32 bytes")
@@ -521,6 +598,16 @@ func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *Ecds
 	return result, recoverable, nil
 
 }
+
+/** Recover an ECDSA public key from a signature.
+ *
+ *  Returns: 1: public key successfully recovered (which guarantees a correct signature).
+ *           0: otherwise.
+ *  Args:    ctx:        pointer to a context object, initialized for verification (cannot be NULL)
+ *  Out:     pubkey:     pointer to the recovered public key (cannot be NULL)
+ *  In:      sig:        pointer to initialized signature that supports pubkey recovery (cannot be NULL)
+ *           msg32:      the 32-byte message hash assumed to be signed (cannot be NULL)
+ */
 func EcdsaRecover(ctx *Context, sig *EcdsaRecoverableSignature, msg32 []byte) (int, *PublicKey, error) {
 	if len(msg32) != 32 {
 		return 0, nil, errors.New("Message hash must be exactly 32 bytes")
