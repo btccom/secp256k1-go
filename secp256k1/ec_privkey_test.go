@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"testing"
+	"fmt"
 )
 
 type PrivkeyTweakAddTestCase struct {
@@ -134,12 +135,51 @@ func TestPrivkeyVerifyFixtures(t *testing.T) {
 	}
 
 	fixtures := GetPrivkeyTweakMulFixtures()
-
 	for i := 0; i < 1; i++ {
-		fixture := fixtures[i]
-		priv := fixture.GetPrivateKey()
-		result, err := EcSeckeyVerify(ctx, priv)
-		spOK(t, result, err)
+		description := fmt.Sprintf("Test case %d", i)
+		t.Run(description, func (t *testing.T) {
+			fixture := fixtures[i]
+			priv := fixture.GetPrivateKey()
+			result, err := EcSeckeyVerify(ctx, priv)
+			spOK(t, result, err)
+		})
+	}
+}
+
+func TestPrivkeyVerifyFailures(t *testing.T) {
+	beyondOrder, _ := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
+
+	testCase := []struct {
+		Priv []byte
+		Error string
+	}{
+		{
+			Priv: []byte(``),
+			Error: ErrorPrivateKeyNull,
+		},
+		{
+			Priv: []byte{0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,},
+			Error: ErrorPrivateKeyInvalid,
+		},
+		{
+			Priv: beyondOrder,
+			Error: ErrorPrivateKeyInvalid,
+		},
+	}
+
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+	for i, l := 0, len(testCase); i < l; i++ {
+		description := fmt.Sprintf("Test case %d", i)
+		t.Run(description, func(t *testing.T) {
+			test := testCase[i]
+			r, err := EcSeckeyVerify(ctx, test.Priv)
+			assert.Equal(t, 0, r)
+			assert.Error(t, err)
+			assert.Equal(t, test.Error, err.Error())
+		})
 	}
 }
 

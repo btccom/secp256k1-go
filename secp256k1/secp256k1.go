@@ -44,6 +44,7 @@ const (
 
 	// Errors returned by functions
 	ErrorPrivateKeyNull  string = "Private key cannot be null"
+	ErrorPrivateKeyInvalid  string = "Invalid private key"
 	ErrorPublicKeyNull  string = "Public key cannot be null"
 	ErrorEcdsaSignatureNull  string = "Signature cannot be null"
 	ErrorEcdsaRecoverableSignatureNull  string = "Recoverable signature" +
@@ -308,7 +309,7 @@ func EcSeckeyVerify(ctx *Context, seckey []byte) (int, error) {
 	}
 	result := int(C.secp256k1_ec_seckey_verify(ctx.ctx, cBuf(seckey[:])))
 	if result != 1 {
-		return result, errors.New("Private key failed validation")
+		return result, errors.New(ErrorPrivateKeyInvalid)
 	}
 	return result, nil
 }
