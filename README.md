@@ -1,10 +1,38 @@
 # secp256k1-go
 
-This package provides bindings (using cgo) to the upstream [https://github.com/bitcoin-core/secp256k1](libsecp256k1) C library.  
+This package provides bindings (using cgo) to the upstream [https://github.com/bitcoin-core/secp256k1](libsecp256k1) C library.
 
-It exposes numerous high level functions for dealing with secp256k1.
+It exposes several high level functions for elliptic curve operations over the 
+secp256k1 curve, namely ECDSA, point & scalar operations, ECDH, and recoverable
+signatures. 
 
-## Overview
+## Warning
+
+It should be mentioned that the upstream library is still experimental
+and has yet to be formally released. As such, you should think twice
+before installing this package. 
+
+The currently targeted version of libsecp256k1 is the latest master commit. 
+
+Currently two experimental libraries are also included and supported: ECDH and 
+signature recovery. These are included with the default installation, and
+may eventually be discontinued by the same (as has happened with Schnorr). 
+
+## Contributing
+
+To start developing, clone the package from github, and from the
+source directory, run the following to install the package.
+
+    git submodule update --init
+    make install
+    
+Tests can be run by calling `make test`
+Coverage can be build by calling `make coverage`
+To display a HTML code coverage report, call `make coverage-html`
+
+Please make sure to include tests for new features.  
+
+## Rationale behind API
 
 There have been some slight changes to the API exposed by libsecp256k1. 
 This section will document conventions adopted in the design. 
@@ -23,11 +51,5 @@ to the private key, tweaking the value in place (overwriting the original value)
 
 To avoid making copies of secrets in memory, we allow upstream to
 overwrite the original values. If the to-be-written value is a new object,
-it is returned as a return value.
+it is returned with the other return values (example: EcdsaSign)
   
-## Installation
-
-    git submodule update --init
-    make install
-    
-    
