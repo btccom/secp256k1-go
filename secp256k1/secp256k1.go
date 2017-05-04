@@ -368,10 +368,9 @@ func EcPrivkeyTweakAdd(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	return result, nil
 }
 
-// Tweak a public key by adding tweak times the generator to it. The
-// return code is 0 if the tweak was out of range (chance of around 1 in
-// 2^128 for uniformly random 32-byte arrays) or if the resulting public
-// key would be invalid. The return code is 1 otherwise.
+// Tweak a private key by multiplying it by a tweak. The return code is 0
+// if the tweak was out of range (chance of around 1 in 2^128 for uniformly
+// random 32-byte arrays) or zero. The code is 1 otherwise.
 func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	if len(tweak) != LenPrivateKey {
 		return 0, errors.New(ErrorTweakSize)
@@ -387,9 +386,10 @@ func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	return result, nil
 }
 
-// Tweak a private key by multiplying it by a tweak. The return code is 0
-// if the tweak was out of range (chance of around 1 in 2^128 for uniformly
-// random 32-byte arrays) or zero. The code is 1 otherwise.
+// Tweak a public key by adding tweak times the generator to it. The
+// return code is 0 if the tweak was out of range (chance of around 1 in
+// 2^128 for uniformly random 32-byte arrays) or if the resulting public
+// key would be invalid. The return code is 1 otherwise.
 func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	if len(tweak) != LenPrivateKey {
 		return 0, errors.New(ErrorTweakSize)
