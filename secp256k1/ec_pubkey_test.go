@@ -437,7 +437,6 @@ func TestPubkeyCombineWithOneReturnsSame(t *testing.T) {
 	assert.Equal(t, pubkey, combinedPoint)
 }
 
-
 func TestPubkeyCombineInvalidSum(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {

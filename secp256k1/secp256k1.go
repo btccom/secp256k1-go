@@ -40,15 +40,15 @@ const (
 	LenCompactSig   int = 64
 	LenMaxDerSig    int = 72
 
-	ErrorEcdh             string = "Unable to do ECDH"
-	ErrorPublicKeyCreate  string = "Unable to produce public key"
-	ErrorPublicKeyCombine string = "Unable to combine public keys"
-	ErrorNullPrivateKey   string = ""
-	ErrorNullSignature   string = ""
-	ErrorNullCompactSignature   string = ""
-	ErrorNullRecoverableSignature   string = ""
-	ErrorNullPublicKey   string = ""
-	ErrorNullMsgHash   string = ""
+	ErrorEcdh                     string = "Unable to do ECDH"
+	ErrorPublicKeyCreate          string = "Unable to produce public key"
+	ErrorPublicKeyCombine         string = "Unable to combine public keys"
+	ErrorNullPrivateKey           string = ""
+	ErrorNullSignature            string = ""
+	ErrorNullCompactSignature     string = ""
+	ErrorNullRecoverableSignature string = ""
+	ErrorNullPublicKey            string = ""
+	ErrorNullMsgHash              string = ""
 
 	ErrorTweakSize      string = "Tweak must be exactly 32 bytes"
 	ErrorMsg32Size      string = "Message hash must be exactly 32 bytes"
