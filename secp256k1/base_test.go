@@ -4,6 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"strings"
+	"fmt"
 	"testing"
 )
 
@@ -14,7 +15,12 @@ const (
 	PubkeyTweakMulTestVectors  = "pubkey_tweak_mul_vectors.yaml"
 	PrivkeyTweakAddTestVectors = "privkey_tweak_add_vectors.yaml"
 	PrivkeyTweakMulTestVectors = "privkey_tweak_mul_vectors.yaml"
+	TestCaseFmt                = "Test case %d"
 )
+
+func desc(i int) string {
+	return fmt.Sprintf(TestCaseFmt, i)
+}
 
 func spOK(t *testing.T, result int, err error) {
 	assert.NoError(t, err)

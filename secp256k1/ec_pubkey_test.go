@@ -2,7 +2,6 @@ package secp256k1
 
 import (
 	"encoding/hex"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"testing"
@@ -57,19 +56,22 @@ func TestPubkeyCreateFixtures(t *testing.T) {
 	fixtures := GetPubkeyCreateFixtures()
 
 	for i := 0; i < len(fixtures); i++ {
-		testCase := fixtures[i]
-		priv := testCase.GetPrivateKey()
+		description := desc(i)
+		t.Run(description, func (t *testing.T) {
+			testCase := fixtures[i]
+			priv := testCase.GetPrivateKey()
 
-		r, publicKey, err := EcPubkeyCreate(ctx, priv)
-		spOK(t, r, err)
+			r, publicKey, err := EcPubkeyCreate(ctx, priv)
+			spOK(t, r, err)
 
-		r, serializedComp, err := EcPubkeySerialize(ctx, publicKey, EcCompressed)
-		spOK(t, r, err)
-		assert.Equal(t, testCase.GetCompressed(), serializedComp)
+			r, serializedComp, err := EcPubkeySerialize(ctx, publicKey, EcCompressed)
+			spOK(t, r, err)
+			assert.Equal(t, testCase.GetCompressed(), serializedComp)
 
-		r, serializedUncomp, err := EcPubkeySerialize(ctx, publicKey, EcUncompressed)
-		spOK(t, r, err)
-		assert.Equal(t, testCase.GetUncompressed(), serializedUncomp)
+			r, serializedUncomp, err := EcPubkeySerialize(ctx, publicKey, EcUncompressed)
+			spOK(t, r, err)
+			assert.Equal(t, testCase.GetUncompressed(), serializedUncomp)
+		})
 	}
 }
 
@@ -82,8 +84,11 @@ func TestPubkeyParseFixtures(t *testing.T) {
 	fixtures := GetPubkeyCreateFixtures()
 
 	for i := 0; i < len(fixtures); i++ {
-		assertCanReadAndWritePublicKey(t, ctx, fixtures[i].GetUncompressed(), EcUncompressed)
-		assertCanReadAndWritePublicKey(t, ctx, fixtures[i].GetCompressed(), EcCompressed)
+		description := desc(i)
+		t.Run(description, func(t *testing.T) {
+			assertCanReadAndWritePublicKey(t, ctx, fixtures[i].GetUncompressed(), EcUncompressed)
+			assertCanReadAndWritePublicKey(t, ctx, fixtures[i].GetCompressed(), EcCompressed)
+		})
 	}
 }
 
@@ -144,17 +149,20 @@ func TestPubkeyTweakAddFixtures(t *testing.T) {
 	fixtures := GetPubkeyTweakAddFixtures()
 
 	for i := 0; i < 1; i++ {
-		fixture := fixtures[i]
-		pubkey := fixture.GetPublicKey(ctx)
-		tweak := fixture.GetTweak()
+		description := desc(i)
+		t.Run(description, func(t *testing.T) {
+			fixture := fixtures[i]
+			pubkey := fixture.GetPublicKey(ctx)
+			tweak := fixture.GetTweak()
 
-		r, err := EcPubkeyTweakAdd(ctx, pubkey, tweak)
-		spOK(t, r, err)
+			r, err := EcPubkeyTweakAdd(ctx, pubkey, tweak)
+			spOK(t, r, err)
 
-		r, serialized, err := EcPubkeySerialize(ctx, pubkey, EcUncompressed)
-		spOK(t, r, err)
+			r, serialized, err := EcPubkeySerialize(ctx, pubkey, EcUncompressed)
+			spOK(t, r, err)
 
-		assert.Equal(t, fixture.GetTweaked(), serialized)
+			assert.Equal(t, fixture.GetTweaked(), serialized)
+		})
 	}
 }
 
@@ -215,7 +223,7 @@ func TestPubkeyTweakMulFixtures(t *testing.T) {
 	fixtures := GetPubkeyTweakMulFixtures()
 
 	for i := 0; i < 1; i++ {
-		description := fmt.Sprintf("Test case %d", i)
+		description := desc(i)
 		t.Run(description, func(t *testing.T) {
 			fixture := fixtures[i]
 			pubkey := fixture.GetPublicKey(ctx)
@@ -245,7 +253,7 @@ func TestSecretKeyMustBeValid(t *testing.T) {
 	tests[1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
 
 	for i := 0; i < numTests; i++ {
-		description := fmt.Sprintf("Test case %d", i)
+		description := desc(i)
 		t.Run(description, func(t *testing.T) {
 			privkey, _ := hex.DecodeString(tests[i])
 			r, pubkey, err := EcPubkeyCreate(ctx, privkey)
@@ -274,7 +282,7 @@ func TestPubKeyParseStringMustBeValid(t *testing.T) {
 	tests[5] = "99726fa5b19e9406aaa46ee22fd9e81a09dd5eb7c87505b93a11efcf4b945e778c"
 
 	for i := 0; i < numTests; i++ {
-		description := fmt.Sprintf("Test case %d", i)
+		description := desc(i)
 		t.Run(description, func(t *testing.T) {
 			hexBytes, _ := hex.DecodeString(tests[i])
 			r, pubkey, err := EcPubkeyParse(ctx, hexBytes)
