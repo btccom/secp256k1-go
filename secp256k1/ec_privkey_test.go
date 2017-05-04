@@ -232,9 +232,20 @@ func TestPrivkeyNegateValidatesSize(t *testing.T) {
 	}
 
 	// pk_1 = -(1)
-	pk_1, _ := hex.DecodeString("01")
+	pk_1, _ := hex.DecodeString("")
 	r, err := EcPrivkeyNegate(ctx, pk_1)
 	assert.Equal(t, 0, r)
-	assert.Equal(t, ErrorPrivateKeySize, err.Error())
+	assert.Equal(t, "Private key cannot be null", err.Error())
 	assert.Error(t, err)
+}
+
+func TestPrivkeyNegateReturnsWithSmallInput(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	pk_1 := []byte{0x01}
+	r, err := EcPrivkeyNegate(ctx, pk_1)
+	spOK(t, r, err)
 }

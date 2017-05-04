@@ -300,9 +300,6 @@ func EcdsaSignatureSerializeDer(ctx *Context, sig *EcdsaSignature) (int, []byte,
 	serializedSig := make([]C.uchar, LenMaxDerSig)
 	outputLen := C.size_t(len(serializedSig))
 	result := int(C.secp256k1_ecdsa_signature_serialize_der(ctx.ctx, &serializedSig[0], &outputLen, sig.sig))
-	if result != 1 {
-		return result, []byte(``), errors.New(ErrorDerSigSerialize)
-	}
 	return result, goBytes(serializedSig, C.int(outputLen)), nil
 }
 
@@ -386,7 +383,6 @@ func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
 	}
 
 	pk := newPublicKey()
-
 	result := int(C.secp256k1_ec_pubkey_create(ctx.ctx, pk.pk, cBuf(seckey[:])))
 	if result != 1 {
 		return result, nil, errors.New(ErrorPublicKeyCreate)
@@ -401,14 +397,11 @@ func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
  *  In/Out: pubkey:     pointer to the public key to be negated (cannot be NULL)
  */
 func EcPrivkeyNegate(ctx *Context, seckey []byte) (int, error) {
-	if len(seckey) != LenPrivateKey {
-		return 0, errors.New(ErrorPrivateKeySize)
+	if len(seckey) < 1 {
+		return 0, errors.New("Private key cannot be null")
 	}
 
 	result := int(C.secp256k1_ec_privkey_negate(ctx.ctx, (*C.uchar)(unsafe.Pointer(&seckey[0]))))
-	if result != 1 {
-		return result, errors.New(ErrorNegatePrivateKey)
-	}
 	return result, nil
 }
 
@@ -522,6 +515,10 @@ func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
  */
 func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
 	l := len(vPk)
+	if l < 1 {
+		return 0, nil, errors.New("Must provide at least one public key")
+	}
+
 	array := C.makePubkeyArray(C.int(l))
 	for i := 0; i < l; i++ {
 		C.setArrayPubkey(array, vPk[i].pk, C.int(i))
