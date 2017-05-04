@@ -45,7 +45,7 @@ func sum(ints []int) int {
 	cargs := C.makeIntArray(C.int(len(ints)))
 
 	for i := 0; i < len(ints); i++ {
-		intval:=C.int(ints[i])
+		intval := C.int(ints[i])
 		C.setArrayInt(cargs, &intval, C.int(i))
 	}
 

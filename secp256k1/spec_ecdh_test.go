@@ -1,9 +1,9 @@
 package secp256k1
 
 import (
-	"testing"
 	"encoding/hex"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestSpecEcdh(t *testing.T) {

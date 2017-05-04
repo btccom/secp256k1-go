@@ -225,7 +225,6 @@ func TestPrivkeyNegate(t *testing.T) {
 	assert.Equal(t, pk1, pk2_will_sub_1)
 }
 
-
 func TestPrivkeyNegateValidatesSize(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {

@@ -228,7 +228,7 @@ func TestPubkeyTweakMulFixtures(t *testing.T) {
 	}
 }
 
-func TestPubkeyMustBeValid(t *testing.T) {
+func TestSecretKeyMustBeValid(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
 		panic(err)
@@ -251,7 +251,31 @@ func TestPubkeyMustBeValid(t *testing.T) {
 		assert.Nil(t, pubkey)
 		assert.Equal(t, ErrorPublicKeyCreate, err.Error())
 	}
+}
+func TestPubKeyParseStringMustBeValid(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
 
+	numTests := 2
+
+	badKey, err := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141")
+	if err != nil {
+		panic(err)
+	}
+
+	tests := make([][]byte, numTests)
+	tests[0] = badKey
+	tests[1] = make([]byte, 0)
+
+	for i := 0; i < numTests; i++ {
+		r, pubkey, err := EcPubkeyParse(ctx, tests[i])
+		assert.Error(t, err)
+		assert.Equal(t, 0, r)
+		assert.Nil(t, pubkey)
+		assert.Equal(t, ErrorPublicKeyParse, err.Error())
+	}
 }
 
 func TestPubkeyCreateChecksSize(t *testing.T) {
@@ -334,7 +358,6 @@ func TestPubkeyNegate(t *testing.T) {
 
 }
 
-
 func TestPubkeyCombine(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
@@ -348,7 +371,7 @@ func TestPubkeyCombine(t *testing.T) {
 	spOK(t, r, err)
 
 	// tweak * G
-	tweak := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,}
+	tweak := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
 	r, tweakPub, err := EcPubkeyCreate(ctx, tweak)
 	spOK(t, r, err)
 
@@ -359,7 +382,6 @@ func TestPubkeyCombine(t *testing.T) {
 	spOK(t, r, err)
 	r, tweakedToPoint, err := EcPubkeyCreate(ctx, tweakedPriv)
 	spOK(t, r, err)
-
 
 	vPoint := []*PublicKey{pubkey, tweakPub}
 	r, combinedPoint, err := EcPubkeyCombine(ctx, vPoint)

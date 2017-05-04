@@ -33,6 +33,9 @@ const (
 	EcCompressed   = uint(C.SECP256K1_EC_COMPRESSED)
 	EcUncompressed = uint(C.SECP256K1_EC_UNCOMPRESSED)
 
+	LenCompressed   int = 33
+	LenUncompressed int = 65
+
 	ErrorEcdh             string = "Unable to do ECDH"
 	ErrorPublicKeyCreate  string = "Unable to produce public key"
 	ErrorPublicKeyCombine string = "Unable to combine public keys"
@@ -161,9 +164,13 @@ func ContextRandomize(ctx *Context, seed32 [32]byte) int {
  *  byte 0x06 or 0x07) format public keys.
  */
 func EcPubkeyParse(ctx *Context, publicKey []byte) (int, *PublicKey, error) {
-	pk := newPublicKey()
+	l := len(publicKey)
+	if l != LenCompressed && l != LenUncompressed {
+		return 0, nil, errors.New(ErrorPublicKeyParse)
+	}
 
-	result := int(C.secp256k1_ec_pubkey_parse(ctx.ctx, pk.pk, cBuf(publicKey), C.size_t(len(publicKey))))
+	pk := newPublicKey()
+	result := int(C.secp256k1_ec_pubkey_parse(ctx.ctx, pk.pk, cBuf(publicKey), C.size_t(l)))
 	if result != 1 {
 		return result, nil, errors.New(ErrorPublicKeyParse)
 	}
