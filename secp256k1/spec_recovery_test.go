@@ -25,8 +25,8 @@ func TestSpecRecoverableSignature(t *testing.T) {
 	r, pub, err := EcPubkeyCreate(context, priv)
 	spOK(t, r, err)
 
-	result := EcdsaVerify(context, plain, msg32, pub)
-	assert.True(t, result == 1)
+	r, err = EcdsaVerify(context, plain, msg32, pub)
+	spOK(t, r, err)
 
 	// Can serialize recoverable signature
 

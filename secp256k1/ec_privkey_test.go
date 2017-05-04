@@ -138,8 +138,8 @@ func TestPrivkeyVerifyFixtures(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		fixture := fixtures[i]
 		priv := fixture.GetPrivateKey()
-		result := EcSeckeyVerify(ctx, priv)
-		assert.Equal(t, 1, result)
+		result, err := EcSeckeyVerify(ctx, priv)
+		spOK(t, result, err)
 	}
 }
 
@@ -252,17 +252,6 @@ func TestPrivkeyNegateValidatesSize(t *testing.T) {
 	pk_1, _ := hex.DecodeString("")
 	r, err := EcPrivkeyNegate(ctx, pk_1)
 	assert.Equal(t, 0, r)
-	assert.Equal(t, "Private key cannot be null", err.Error())
+	assert.Equal(t, ErrorPrivateKeySize, err.Error())
 	assert.Error(t, err)
-}
-
-func TestPrivkeyNegateReturnsWithSmallInput(t *testing.T) {
-	ctx, err := ContextCreate(ContextSign | ContextVerify)
-	if err != nil {
-		panic(err)
-	}
-
-	pk_1 := []byte{0x01}
-	r, err := EcPrivkeyNegate(ctx, pk_1)
-	spOK(t, r, err)
 }

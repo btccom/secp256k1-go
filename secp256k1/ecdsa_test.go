@@ -64,6 +64,19 @@ func GetEcdsaFixtures() []EcdsaTestCase {
 	return testCase
 }
 
+func Test_Ecdsa_InvalidSig(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	sig := newEcdsaSignature()
+	pk := newPublicKey();
+	r, err := EcdsaVerify(ctx, sig, []byte{}, pk)
+	assert.Error(t, err)
+	assert.Equal(t, 0, r)
+}
+
 func Test_Ecdsa_Verify(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
@@ -78,8 +91,8 @@ func Test_Ecdsa_Verify(t *testing.T) {
 		pubkey := testCase.GetPublicKey(ctx)
 		sig := testCase.GetSig(ctx)
 
-		result := EcdsaVerify(ctx, sig, msg32, pubkey)
-		spOK(t, result, nil)
+		result, err := EcdsaVerify(ctx, sig, msg32, pubkey)
+		spOK(t, result, err)
 	}
 }
 

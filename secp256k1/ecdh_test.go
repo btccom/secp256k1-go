@@ -39,5 +39,5 @@ func TestEcdhInvalidKey(t *testing.T) {
 	r, _, err = Ecdh(ctx, Bob, alice)
 	assert.Equal(t, 0, r)
 	assert.Error(t, err)
-	assert.Equal(t, ErrorNullPrivateKey, err.Error())
+	assert.Equal(t, ErrorPrivateKeySize, err.Error())
 }
