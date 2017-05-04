@@ -2,15 +2,15 @@ package secp256k1
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"fmt"
 )
 
 func TestParseRecoverableSignatureErrors(t *testing.T) {
 	badSig, _ := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
 
-	testCase := []struct{
+	testCase := []struct {
 		Sig64 []byte
 		RecId int
 		Error string
@@ -46,7 +46,7 @@ func TestParseRecoverableSignatureErrors(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	for i,l := 0,len(testCase); i < l; i++ {
+	for i, l := 0, len(testCase); i < l; i++ {
 		description := fmt.Sprintf("Test case %d", i)
 		t.Run(description, func(t *testing.T) {
 			test := testCase[i]
@@ -61,23 +61,23 @@ func TestParseRecoverableSignatureErrors(t *testing.T) {
 func TestEcdsaSignRecoverableErrors(t *testing.T) {
 	badKey, _ := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
 
-	testCase := []struct{
+	testCase := []struct {
 		Msg32 []byte
-		Priv []byte
+		Priv  []byte
 		Error string
 	}{
 		{
-			Priv: testingRand(32),
+			Priv:  testingRand(32),
 			Msg32: []byte(`a`),
 			Error: ErrorMsg32Size,
 		},
 		{
 			Msg32: testingRand(32),
-			Priv: []byte(`a`),
+			Priv:  []byte(`a`),
 			Error: ErrorPrivateKeySize,
 		},
 		{
-			Priv: badKey,
+			Priv:  badKey,
 			Msg32: testingRand(32),
 			Error: ErrorProducingRecoverableSignature,
 		},
@@ -87,7 +87,7 @@ func TestEcdsaSignRecoverableErrors(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	for i,l := 0,len(testCase); i < l; i++ {
+	for i, l := 0, len(testCase); i < l; i++ {
 		description := fmt.Sprintf("Test case %d", i)
 		t.Run(description, func(t *testing.T) {
 			test := testCase[i]
