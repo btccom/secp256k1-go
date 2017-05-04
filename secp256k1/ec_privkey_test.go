@@ -188,7 +188,6 @@ func TestPrivkeyTweakAddChecksPrivkeySize(t *testing.T) {
 	assert.Equal(t, ErrorPrivateKeySize, err.Error())
 }
 
-
 func TestPrivkeyTweakAddChecksPrivkeyOverflow(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
