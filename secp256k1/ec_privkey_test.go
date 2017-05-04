@@ -202,3 +202,40 @@ func TestPrivkeyTweakMulChecksPrivkeySize(t *testing.T) {
 	assert.Equal(t, 0, r)
 	assert.Equal(t, ErrorPrivateKeySize, err.Error())
 }
+
+func TestPrivkeyNegate(t *testing.T) {
+	pk1, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+	pk2_will_sub_1, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000002")
+
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	// pk_1 = -(1)
+	pk_1, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+	r, err := EcPrivkeyNegate(ctx, pk_1)
+	spOK(t, r, err)
+
+	// pk2_will_sub_1: = 2+(-(1)) %p
+	r, err = EcPrivkeyTweakAdd(ctx, pk2_will_sub_1, pk_1)
+	spOK(t, r, err)
+
+	// therefore 1 = pk2_will_sub_1 %p
+	assert.Equal(t, pk1, pk2_will_sub_1)
+}
+
+
+func TestPrivkeyNegateValidatesSize(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	// pk_1 = -(1)
+	pk_1, _ := hex.DecodeString("01")
+	r, err := EcPrivkeyNegate(ctx, pk_1)
+	assert.Equal(t, 0, r)
+	assert.Equal(t, ErrorPrivateKeySize, err.Error())
+	assert.Error(t, err)
+}

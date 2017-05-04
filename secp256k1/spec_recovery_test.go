@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestRecoveryToSpec(t *testing.T) {
+func TestSpecRecoverableSignature(t *testing.T) {
 	context, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
 		panic(err)

@@ -36,7 +36,6 @@ func (t *EcdsaTestCase) GetMessage() []byte {
 	}
 	return msg
 }
-
 func (t *EcdsaTestCase) GetSigBytes() []byte {
 	sig, err := hex.DecodeString(removeSigHash(t.Sig))
 	if err != nil {

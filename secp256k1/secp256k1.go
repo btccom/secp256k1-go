@@ -1,15 +1,27 @@
 package secp256k1
 
+// #include <stdlib.h>
 // #include "c-secp256k1/include/secp256k1.h"
 // #include "c-secp256k1/include/secp256k1_ecdh.h"
 // #include "c-secp256k1/include/secp256k1_recovery.h"
+/*
+// for secp256k1_pubkey** https://groups.google.com/forum/#!topic/golang-nuts/pQueMFdY0mk
+static secp256k1_pubkey** makePubkeyArray(int size) {
+        return calloc(sizeof(secp256k1_pubkey*), size);
+}
+static void setArrayPubkey(secp256k1_pubkey **a, secp256k1_pubkey *pubkey, int n) {
+        a[n] = pubkey;
+}
+static void freePubkeyArray(secp256k1_pubkey **a) {
+        free(a);
+}
+*/
 // #cgo LDFLAGS: ${SRCDIR}/c-secp256k1/.libs/libsecp256k1.a -lgmp
 import "C"
 
 import (
 	"github.com/pkg/errors"
 	"unsafe"
-	//"log"
 )
 
 const (
@@ -386,12 +398,12 @@ func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
  *  Args:   ctx:        pointer to a context object
  *  In/Out: pubkey:     pointer to the public key to be negated (cannot be NULL)
  */
-func EcPrivkeyNegate(ctx *Context, seckey *[]byte) (int, error) {
-	if len(*seckey) != 32 {
+func EcPrivkeyNegate(ctx *Context, seckey []byte) (int, error) {
+	if len(seckey) != 32 {
 		return 0, errors.New(ErrorPrivateKeySize)
 	}
 
-	result := int(C.secp256k1_ec_privkey_negate(ctx.ctx, (*C.uchar)(unsafe.Pointer(seckey))))
+	result := int(C.secp256k1_ec_privkey_negate(ctx.ctx, (*C.uchar)(unsafe.Pointer(&seckey[0]))))
 	if result != 1 {
 		return result, errors.New(ErrorNegatePrivateKey)
 	}
@@ -406,9 +418,6 @@ func EcPrivkeyNegate(ctx *Context, seckey *[]byte) (int, error) {
  */
 func EcPubkeyNegate(ctx *Context, pubkey *PublicKey) (int, error) {
 	result := int(C.secp256k1_ec_pubkey_negate(ctx.ctx, pubkey.pk))
-	if result != 1 {
-		return result, errors.New(ErrorNegatePublicKey)
-	}
 	return result, nil
 }
 
@@ -510,17 +519,20 @@ func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
  *          n:          the number of public keys to add together (must be at least 1)
  */
 func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
-	num := len(vPk)
-	vPubkey := make([]*C.secp256k1_pubkey, num)
-	for i := 0; i < num; i++ {
-		vPubkey[i] = vPk[i].pk
+	l := len(vPk)
+	array := C.makePubkeyArray(C.int(l))
+	for i := 0; i < l; i++ {
+		C.setArrayPubkey(array, vPk[i].pk, C.int(i))
 	}
 
+	defer C.freePubkeyArray(array)
+
 	pkOut := newPublicKey()
-	result := int(C.secp256k1_ec_pubkey_combine(ctx.ctx, pkOut.pk, unsafe.Pointer(&vPubkey), C.size_t(num)))
+	result := int(C.secp256k1_ec_pubkey_combine(ctx.ctx, pkOut.pk, array, C.size_t(l)))
 	if result != 1 {
 		return result, nil, errors.New(ErrorPublicKeyCombine)
 	}
+
 	return result, pkOut, nil
 }
 
@@ -535,10 +547,14 @@ func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
  *           privkey:    a 32-byte scalar with which to multiply the point
  */
 func Ecdh(ctx *Context, pubKey *PublicKey, privKey []byte) (int, []byte, error) {
+	if len(privKey) != 32 {
+		return 0, []byte{}, errors.New(ErrorPrivateKeySize)
+	}
+
 	secret := make([]byte, 32)
 	result := int(C.secp256k1_ecdh(ctx.ctx, cBuf(secret[:]), pubKey.pk, cBuf(privKey[:])))
 	if result != 1 {
-		return result, []byte(``), errors.New(ErrorEcdh)
+		return result, []byte{}, errors.New(ErrorEcdh)
 	}
 	return result, secret, nil
 }

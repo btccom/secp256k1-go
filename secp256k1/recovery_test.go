@@ -93,31 +93,7 @@ func TestEcdsaRecoverCanError(t *testing.T) {
 	assert.Equal(t, ErrorMsg32Size, err.Error())
 }
 
-//
-//func TestEcdsaRecoverCanError(t *testing.T) {
-//	ctx, err := ContextCreate(ContextSign | ContextVerify)
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	priv := testingRand(32)
-//	msg32 := testingRand(32)
-//	msg32_2 := testingRand(32)
-//
-//	_, sig, err := EcdsaSignRecoverable(ctx, msg32, priv)
-//	assert.NoError(t, err)
-//
-//	r, _, err := EcdsaRecover(ctx, sig, msg32)
-//	assert.Equal(t, 1, r)
-//	assert.NoError(t, err)
-//
-//	r, _, err = EcdsaRecover(ctx, sig, msg32_2)
-//	assert.Equal(t, 0, r)
-//	assert.Error(t, err)
-//	assert.Equal(t, ErrorRecoveryFailed, err.Error())
-//}
-
-func TestSerializeRecoverableSignatureMustBeValid(t *testing.T) {
+func TestSerializeRecoverableSignatureWorksIfNull(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
 		panic(err)

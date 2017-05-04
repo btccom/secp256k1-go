@@ -308,3 +308,62 @@ func TestPubkeyTweakMulChecksTweakSize(t *testing.T) {
 	assert.Equal(t, 0, r)
 	assert.Equal(t, ErrorTweakSize, err.Error())
 }
+
+func TestPubkeyNegate(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	privkey := []byte(`abcd1234abcd1234abcd1234abcd1234`)
+
+	// (-1*k)*G == -1*(k*G)
+	privkeyCopy := []byte(`abcd1234abcd1234abcd1234abcd1234`)
+	r, err := EcPrivkeyNegate(ctx, privkeyCopy)
+	spOK(t, r, err)
+	r, LHS, err := EcPubkeyCreate(ctx, privkeyCopy)
+	spOK(t, r, err)
+
+	r, rhs, err := EcPubkeyCreate(ctx, privkey)
+	spOK(t, r, err)
+	r, err = EcPubkeyNegate(ctx, rhs)
+	assert.Equal(t, 1, r)
+	assert.NoError(t, err)
+
+	assert.Equal(t, LHS, rhs)
+
+}
+
+
+func TestPubkeyCombine(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	privkey := []byte(`abcd1234abcd1234abcd1234abcd1234`)
+
+	// privkey * G
+	r, pubkey, err := EcPubkeyCreate(ctx, privkey)
+	spOK(t, r, err)
+
+	// tweak * G
+	tweak := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,}
+	r, tweakPub, err := EcPubkeyCreate(ctx, tweak)
+	spOK(t, r, err)
+
+	// tweakedPriv: privkey + tweak
+	// tweakedToPoint: (privkey+tweak) * G
+	tweakedPriv := privkey
+	r, err = EcPrivkeyTweakAdd(ctx, tweakedPriv, tweak)
+	spOK(t, r, err)
+	r, tweakedToPoint, err := EcPubkeyCreate(ctx, tweakedPriv)
+	spOK(t, r, err)
+
+
+	vPoint := []*PublicKey{pubkey, tweakPub}
+	r, combinedPoint, err := EcPubkeyCombine(ctx, vPoint)
+	spOK(t, r, err)
+
+	assert.Equal(t, tweakedToPoint, combinedPoint)
+}

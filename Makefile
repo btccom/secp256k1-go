@@ -11,6 +11,8 @@ deps-1:
 
 build-test: 
 		go build -o build/test bin/test/main.go
+build-script-ptr-ptr: 
+		go build -o build/scratch_ptr_ptr bin/scratch_ptr_ptr/main.go
 
 test: test-cleanup test-secp256k1
 
