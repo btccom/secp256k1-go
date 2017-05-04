@@ -188,6 +188,24 @@ func TestPrivkeyTweakAddChecksPrivkeySize(t *testing.T) {
 	assert.Equal(t, ErrorPrivateKeySize, err.Error())
 }
 
+
+func TestPrivkeyTweakAddChecksPrivkeyOverflow(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	priv, _ := hex.DecodeString("e9a06e539d6bf5cf1ca5c41b59121fa3df07a338322405a312c67b6349a707e9")
+	tweak, _ := hex.DecodeString("e9a06e539d6bf5cf1ca5c41b59121fa3df07a338322405a312c67b6349a707e9")
+	r, err := EcPrivkeyNegate(ctx, tweak)
+	spOK(t, r, err)
+
+	r, err = EcPrivkeyTweakAdd(ctx, priv, tweak)
+	assert.Error(t, err)
+	assert.Equal(t, 0, r)
+	assert.Equal(t, ErrorTweakingPrivateKey, err.Error())
+}
+
 func TestPrivkeyTweakMulChecksPrivkeySize(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
