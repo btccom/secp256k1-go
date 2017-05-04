@@ -43,11 +43,17 @@ const (
 	ErrorEcdh             string = "Unable to do ECDH"
 	ErrorPublicKeyCreate  string = "Unable to produce public key"
 	ErrorPublicKeyCombine string = "Unable to combine public keys"
+	ErrorNullPrivateKey   string = ""
+	ErrorNullSignature   string = ""
+	ErrorNullCompactSignature   string = ""
+	ErrorNullRecoverableSignature   string = ""
+	ErrorNullPublicKey   string = ""
+	ErrorNullMsgHash   string = ""
 
 	ErrorTweakSize      string = "Tweak must be exactly 32 bytes"
 	ErrorMsg32Size      string = "Message hash must be exactly 32 bytes"
 	ErrorPrivateKeySize string = "Private key must be exactly 32 bytes"
-	ErrorPublicKeySize string = "Public key must be 33 or 65 bytes"
+	ErrorPublicKeySize  string = "Public key must be 33 or 65 bytes"
 
 	ErrorTweakingPublicKey  string = "Unable to tweak this public key"
 	ErrorTweakingPrivateKey string = "Unable to tweak this private key"
@@ -531,7 +537,6 @@ func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
 	if result != 1 {
 		return result, nil, errors.New(ErrorPublicKeyCombine)
 	}
-
 	return result, pkOut, nil
 }
 
@@ -546,10 +551,9 @@ func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
  *           privkey:    a 32-byte scalar with which to multiply the point
  */
 func Ecdh(ctx *Context, pubKey *PublicKey, privKey []byte) (int, []byte, error) {
-	if len(privKey) != LenPrivateKey {
-		return 0, []byte{}, errors.New(ErrorPrivateKeySize)
+	if len(privKey) < 1 {
+		return 0, []byte{}, errors.New(ErrorNullPrivateKey)
 	}
-
 	secret := make([]byte, LenPrivateKey)
 	result := int(C.secp256k1_ecdh(ctx.ctx, cBuf(secret[:]), pubKey.pk, cBuf(privKey[:])))
 	if result != 1 {

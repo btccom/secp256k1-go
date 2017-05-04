@@ -216,7 +216,7 @@ func TestPubkeyTweakMulFixtures(t *testing.T) {
 
 	for i := 0; i < 1; i++ {
 		description := fmt.Sprintf("Test case %d", i)
-		t.Run(description, func (t *testing.T) {
+		t.Run(description, func(t *testing.T) {
 			fixture := fixtures[i]
 			pubkey := fixture.GetPublicKey(ctx)
 			tweak := fixture.GetTweak()
@@ -246,7 +246,7 @@ func TestSecretKeyMustBeValid(t *testing.T) {
 
 	for i := 0; i < numTests; i++ {
 		description := fmt.Sprintf("Test case %d", i)
-		t.Run(description, func (t *testing.T) {
+		t.Run(description, func(t *testing.T) {
 			privkey, _ := hex.DecodeString(tests[i])
 			r, pubkey, err := EcPubkeyCreate(ctx, privkey)
 			assert.Error(t, err)
@@ -275,7 +275,7 @@ func TestPubKeyParseStringMustBeValid(t *testing.T) {
 
 	for i := 0; i < numTests; i++ {
 		description := fmt.Sprintf("Test case %d", i)
-		t.Run(description, func (t *testing.T) {
+		t.Run(description, func(t *testing.T) {
 			hexBytes, _ := hex.DecodeString(tests[i])
 			r, pubkey, err := EcPubkeyParse(ctx, hexBytes)
 
@@ -403,4 +403,62 @@ func TestPubkeyCombine(t *testing.T) {
 	spOK(t, r, err)
 
 	assert.Equal(t, tweakedToPoint, combinedPoint)
+}
+
+func TestPubkeyCombineRequiresAtLeastOne(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	vPoint := []*PublicKey{}
+	r, combinedPoint, err := EcPubkeyCombine(ctx, vPoint)
+	assert.Error(t, err)
+	assert.Nil(t, combinedPoint)
+	assert.Equal(t, 0, r)
+}
+
+func TestPubkeyCombineWithOneReturnsSame(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	privkey := []byte(`abcd1234abcd1234abcd1234abcd1234`)
+
+	// privkey * G
+	r, pubkey, err := EcPubkeyCreate(ctx, privkey)
+	spOK(t, r, err)
+
+	vPoint := []*PublicKey{pubkey}
+	r, combinedPoint, err := EcPubkeyCombine(ctx, vPoint)
+	spOK(t, r, err)
+
+	assert.Equal(t, pubkey, combinedPoint)
+}
+
+
+func TestPubkeyCombineInvalidSum(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	privkey := []byte(`abcd1234abcd1234abcd1234abcd1234`)
+
+	// privkey * G
+	r, pubkey, err := EcPubkeyCreate(ctx, privkey)
+	spOK(t, r, err)
+
+	r, pubkeyNegate, err := EcPubkeyCreate(ctx, privkey)
+	spOK(t, r, err)
+	r, err = EcPubkeyNegate(ctx, pubkeyNegate)
+	spOK(t, r, err)
+
+	vPoint := []*PublicKey{pubkey, pubkeyNegate}
+	r, combinedPoint, err := EcPubkeyCombine(ctx, vPoint)
+	assert.Error(t, err)
+	assert.Nil(t, combinedPoint)
+	assert.Equal(t, 0, r)
+	assert.Equal(t, ErrorPublicKeyCombine, err.Error())
 }
