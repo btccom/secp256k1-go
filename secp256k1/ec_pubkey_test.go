@@ -2,6 +2,7 @@ package secp256k1
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"testing"
@@ -258,22 +259,23 @@ func TestPubKeyParseStringMustBeValid(t *testing.T) {
 		panic(err)
 	}
 
-	numTests := 2
+	numTests := 6
 
-	badKey, err := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141")
-	if err != nil {
-		panic(err)
-	}
-
-	tests := make([][]byte, numTests)
-	tests[0] = badKey
-	tests[1] = make([]byte, 0)
+	tests := make([]string, numTests)
+	tests[0] = ""
+	// x exceeds curve order
+	tests[1] = "02FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
+	tests[2] = "04FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+	tests[3] = "04FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
+	tests[4] = "04726fa5b19e9406aaa46ee22fd9e81a09dd5eb7c87505b93a11efcf4b945e778c"
+	tests[5] = "99726fa5b19e9406aaa46ee22fd9e81a09dd5eb7c87505b93a11efcf4b945e778c"
 
 	for i := 0; i < numTests; i++ {
-		r, pubkey, err := EcPubkeyParse(ctx, tests[i])
-		assert.Error(t, err)
-		assert.Equal(t, 0, r)
-		assert.Nil(t, pubkey)
+		hexBytes, _ := hex.DecodeString(tests[i])
+		r, pubkey, err := EcPubkeyParse(ctx, hexBytes)
+		assert.Error(t, err, fmt.Sprintf("Test case %d", i))
+		assert.Equal(t, 0, r, i)
+		assert.Nil(t, pubkey, i)
 		assert.Equal(t, ErrorPublicKeyParse, err.Error())
 	}
 }
