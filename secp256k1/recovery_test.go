@@ -4,84 +4,99 @@ import (
 	"encoding/hex"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"fmt"
 )
 
-func TestParseRecoverableCompactSignatureRequires64Bytes(t *testing.T) {
+func TestParseRecoverableSignatureErrors(t *testing.T) {
+	badSig, _ := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
+
+	testCase := []struct{
+		Sig64 []byte
+		RecId int
+		Error string
+	}{
+		{
+			Sig64: []byte(`a`),
+			RecId: 0,
+			Error: ErrorCompactSigSize,
+		},
+		{
+			Sig64: badSig,
+			RecId: 0,
+			Error: ErrorRecoverableSigParse,
+		},
+		{
+			Sig64: badSig,
+			RecId: 1,
+			Error: ErrorRecoverableSigParse,
+		},
+		{
+			Sig64: badSig,
+			RecId: 2,
+			Error: ErrorRecoverableSigParse,
+		},
+		{
+			Sig64: badSig,
+			RecId: 3,
+			Error: ErrorRecoverableSigParse,
+		},
+	}
+
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
 		panic(err)
 	}
-
-	bad := []byte(`a`)
-	r, sig, err := EcdsaRecoverableSignatureParseCompact(ctx, bad, 0)
-	assert.Error(t, err)
-	assert.Equal(t, 0, r)
-	assert.Nil(t, sig)
-	assert.Equal(t, ErrorCompactSigSize, err.Error())
+	for i,l := 0,len(testCase); i < l; i++ {
+		description := fmt.Sprintf("Test case %d", i)
+		t.Run(description, func(t *testing.T) {
+			test := testCase[i]
+			r, _, err := EcdsaRecoverableSignatureParseCompact(ctx, test.Sig64, test.RecId)
+			assert.Equal(t, 0, r)
+			assert.Error(t, err)
+			assert.Equal(t, test.Error, err.Error())
+		})
+	}
 }
 
-func TestParseRecoverableSignatureMustBeValid(t *testing.T) {
+func TestEcdsaSignRecoverableErrors(t *testing.T) {
+	badKey, _ := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
+
+	testCase := []struct{
+		Msg32 []byte
+		Priv []byte
+		Error string
+	}{
+		{
+			Priv: testingRand(32),
+			Msg32: []byte(`a`),
+			Error: ErrorMsg32Size,
+		},
+		{
+			Msg32: testingRand(32),
+			Priv: []byte(`a`),
+			Error: ErrorPrivateKeySize,
+		},
+		{
+			Priv: badKey,
+			Msg32: testingRand(32),
+			Error: ErrorProducingRecoverableSignature,
+		},
+	}
+
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
 		panic(err)
 	}
-
-	bad, err := hex.DecodeString(`FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142`)
-	if err != nil {
-		panic(err)
+	for i,l := 0,len(testCase); i < l; i++ {
+		description := fmt.Sprintf("Test case %d", i)
+		t.Run(description, func(t *testing.T) {
+			test := testCase[i]
+			r, _, err := EcdsaSignRecoverable(ctx, test.Msg32, test.Priv)
+			assert.Equal(t, 0, r)
+			assert.Error(t, err)
+			assert.Equal(t, test.Error, err.Error())
+		})
 	}
-
-	for recid := 0; recid < 4; recid++ {
-		r, sig, err := EcdsaRecoverableSignatureParseCompact(ctx, bad, recid)
-		assert.Error(t, err)
-		assert.Equal(t, 0, r)
-		assert.Nil(t, sig)
-		assert.Equal(t, ErrorRecoverableSigParse, err.Error())
-	}
-}
-
-func TestEcdsaSignRecoverableChecksPrivkeySize(t *testing.T) {
-	ctx, err := ContextCreate(ContextSign | ContextVerify)
-	if err != nil {
-		panic(err)
-	}
-
-	msg32 := testingRand(32)
-	priv := []byte(`a`)
-
-	r, _, err := EcdsaSignRecoverable(ctx, msg32, priv)
-	assert.Equal(t, 0, r)
-	assert.Error(t, err)
-	assert.Equal(t, ErrorPrivateKeySize, err.Error())
-}
-func TestEcdsaSignRecoverableChecksPrivateKey(t *testing.T) {
-	ctx, err := ContextCreate(ContextSign | ContextVerify)
-	if err != nil {
-		panic(err)
-	}
-
-	priv, _ := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
-	msg32 := testingRand(32)
-
-	r, _, err := EcdsaSignRecoverable(ctx, msg32, priv)
-	assert.Equal(t, 0, r)
-	assert.Error(t, err)
-	assert.Equal(t, ErrorProducingRecoverableSignature, err.Error())
-}
-
-func TestEcdsaSignRecoverableChecksMsg32(t *testing.T) {
-	ctx, err := ContextCreate(ContextSign | ContextVerify)
-	if err != nil {
-		panic(err)
-	}
-
-	priv := testingRand(32)
-	msg32 := []byte(`a`)
-
-	r, _, err := EcdsaSignRecoverable(ctx, msg32, priv)
-	assert.Equal(t, 0, r)
-	assert.Error(t, err)
-	assert.Equal(t, ErrorMsg32Size, err.Error())
 }
 
 func TestEcdsaRecoverCanError(t *testing.T) {
