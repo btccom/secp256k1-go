@@ -61,29 +61,6 @@ func Test_ContextCreate1(t *testing.T) {
 	assert.Equal(t, 1, res)
 }
 
-func Test_EcPubkeyParse(t *testing.T) {
-	ctx, err := ContextCreate(uint(ContextSign | ContextVerify))
-	if err != nil {
-		panic(err)
-	}
-
-	publicKey, err := hex.DecodeString(TestPublicKeyCompressed)
-	s, pk, err := EcPubkeyParse(ctx, publicKey)
-	if err != nil {
-		panic(err)
-	}
-
-	assert.IsType(t, PublicKey{}, *pk)
-	assert.Equal(t, 1, s)
-	assert.NoError(t, err)
-
-	s, out, err := EcPubkeySerialize(ctx, pk, EcCompressed)
-	assert.Equal(t, 1, s)
-	assert.NoError(t, err)
-	assert.Equal(t, TestPublicKeyCompressed, hex.EncodeToString(out))
-
-}
-
 func Test_EcdsaSignatureParseCompact(t *testing.T) {
 	ctx, err := ContextCreate(uint(ContextSign | ContextVerify))
 	if err != nil {
