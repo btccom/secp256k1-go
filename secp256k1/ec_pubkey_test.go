@@ -57,7 +57,7 @@ func TestPubkeyCreateFixtures(t *testing.T) {
 
 	for i := 0; i < len(fixtures); i++ {
 		description := desc(i)
-		t.Run(description, func (t *testing.T) {
+		t.Run(description, func(t *testing.T) {
 			testCase := fixtures[i]
 			priv := testCase.GetPrivateKey()
 
@@ -457,7 +457,7 @@ func TestPubkeyCombineWithOneReturnsSame(t *testing.T) {
 	// privkey * G
 	r, pubkey, err := EcPubkeyCreate(ctx, privkey)
 	spOK(t, r, err)
-	
+
 	vPoint := []*PublicKey{pubkey}
 	r, combinedPoint, err := EcPubkeyCombine(ctx, vPoint)
 	spOK(t, r, err)

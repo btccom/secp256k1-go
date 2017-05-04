@@ -43,15 +43,15 @@ const (
 	LenMaxDerSig    int = 72
 
 	// Errors returned by functions
-	ErrorPrivateKeyNull  string = "Private key cannot be null"
-	ErrorPrivateKeyInvalid  string = "Invalid private key"
-	ErrorPublicKeyNull  string = "Public key cannot be null"
-	ErrorEcdsaSignatureNull  string = "Signature cannot be null"
-	ErrorEcdsaRecoverableSignatureNull  string = "Recoverable signature" +
+	ErrorPrivateKeyNull                string = "Private key cannot be null"
+	ErrorPrivateKeyInvalid             string = "Invalid private key"
+	ErrorPublicKeyNull                 string = "Public key cannot be null"
+	ErrorEcdsaSignatureNull            string = "Signature cannot be null"
+	ErrorEcdsaRecoverableSignatureNull string = "Recoverable signature" +
 		" cannot be null"
-	ErrorEcdh                     string = "Unable to do ECDH"
-	ErrorPublicKeyCreate          string = "Unable to produce public key"
-	ErrorPublicKeyCombine         string = "Unable to combine public keys"
+	ErrorEcdh             string = "Unable to do ECDH"
+	ErrorPublicKeyCreate  string = "Unable to produce public key"
+	ErrorPublicKeyCombine string = "Unable to combine public keys"
 
 	ErrorTweakSize      string = "Tweak must be exactly 32 bytes"
 	ErrorMsg32Size      string = "Message hash must be exactly 32 bytes"
@@ -64,16 +64,15 @@ const (
 	ErrorProducingSignature            string = "Unable to produce signature"
 	ErrorProducingRecoverableSignature string = "Unable to produce recoverable signature"
 
-	ErrorCompactSigSize      string = "Compact signature must be exactly 64 bytes"
-	ErrorCompactSigParse     string = "Unable to parse this compact signature"
+	ErrorCompactSigSize  string = "Compact signature must be exactly 64 bytes"
+	ErrorCompactSigParse string = "Unable to parse this compact signature"
 
-	ErrorDerSigParse     string = "Unable to parse this DER signature"
+	ErrorDerSigParse string = "Unable to parse this DER signature"
 
-	ErrorRecoverableSigParse     string = "Unable to parse this recoverable signature"
-	ErrorRecoveryFailed          string = "Failed to recover public key"
+	ErrorRecoverableSigParse string = "Unable to parse this recoverable signature"
+	ErrorRecoveryFailed      string = "Failed to recover public key"
 
-	ErrorPublicKeyParse     string = "Unable to parse this public key"
-
+	ErrorPublicKeyParse string = "Unable to parse this public key"
 )
 
 // Context wraps a *secp256k1_context, required to use all
@@ -269,7 +268,7 @@ func EcdsaSignatureSerializeDer(ctx *Context, sig *EcdsaSignature) (int, []byte,
 // EcdsaSignatureNormalize() prior to validation (however, this results in
 // malleable signatures)
 func EcdsaVerify(ctx *Context, sig *EcdsaSignature, msg32 []byte,
-				pubkey *PublicKey) (int, error) {
+	pubkey *PublicKey) (int, error) {
 	if len(msg32) != LenMsgHash {
 		return 0, errors.New(ErrorMsg32Size)
 	}
@@ -388,13 +387,9 @@ func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
 	return result, nil
 }
 
-/** Tweak a private key by multiplying it by a tweak.
- * Returns: 0 if the tweak was out of range (chance of around 1 in 2^128 for
- *          uniformly random 32-byte arrays, or equal to zero. 1 otherwise.
- * Args:   ctx:    pointer to a context object (cannot be NULL).
- * In/Out: seckey: pointer to a 32-byte private key.
- * In:     tweak:  pointer to a 32-byte tweak.
- */
+// Tweak a private key by multiplying it by a tweak. The return code is 0
+// if the tweak was out of range (chance of around 1 in 2^128 for uniformly
+// random 32-byte arrays) or zero. The code is 1 otherwise.
 func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	if len(tweak) != LenPrivateKey {
 		return 0, errors.New(ErrorTweakSize)
@@ -407,14 +402,9 @@ func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	return result, nil
 }
 
-/** Tweak a public key by multiplying it by a tweak value.
- * Returns: 0 if the tweak was out of range (chance of around 1 in 2^128 for
- *          uniformly random 32-byte arrays, or equal to zero. 1 otherwise.
- * Args:    ctx:    pointer to a context object initialized for validation
- *                 (cannot be NULL).
- * In/Out:  pubkey: pointer to a public key obkect.
- * In:      tweak:  pointer to a 32-byte tweak.
- */
+// Tweak a public key by multiplying it by a tweak. The return code is 0
+// if the tweak was out of range (chance of around 1 in 2^128 for uniformly
+// random 32-byte arrays) or zero. The code is 1 otherwise.
 func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	if len(tweak) != LenPrivateKey {
 		return 0, errors.New(ErrorTweakSize)
@@ -427,15 +417,9 @@ func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
 	return result, nil
 }
 
-/** Add a number of public keys together.
- *  Returns: 1: the sum of the public keys is valid.
- *           0: the sum of the public keys is not valid.
- *  Args:   ctx:        pointer to a context object
- *  Out:    out:        pointer to a public key object for placing the resulting public key
- *                      (cannot be NULL)
- *  In:     ins:        pointer to array of pointers to public keys (cannot be NULL)
- *          n:          the number of public keys to add together (must be at least 1)
- */
+// EcPubkeyCombine will compute sum of all the provided public keys,
+// returning a new point. The error code is 1 if the sum is valid, 0
+// otherwise. There must be at least one public key.
 func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
 	l := len(vPk)
 	if l < 1 {
@@ -471,14 +455,8 @@ func Ecdh(ctx *Context, pubKey *PublicKey, privKey []byte) (int, []byte, error) 
 	return result, secret, nil
 }
 
-/** Parse a compact ECDSA signature (64 bytes + recovery id).
- *
- *  Returns: 1 when the signature could be parsed, 0 otherwise
- *  Args: ctx:     a secp256k1 context object
- *  Out:  sig:     a pointer to a signature object
- *  In:   input64: a pointer to a 64-byte compact signature
- *        recid:   the recovery id (0, 1, 2 or 3)
- */
+// Parse a compact ECDSA signature from the 64-byte signature and recovery
+// id (0, 1, 2, or 3). The return code is 1 if successful, 0 otherwise.
 func EcdsaRecoverableSignatureParseCompact(ctx *Context, signature []byte, recid int) (int, *EcdsaRecoverableSignature, error) {
 	if len(signature) != LenCompactSig {
 		return 0, nil, errors.New(ErrorCompactSigSize)
@@ -503,29 +481,17 @@ func EcdsaRecoverableSignatureSerializeCompact(ctx *Context, sig *EcdsaRecoverab
 	return result, goBytes(output, C.int(LenCompactSig)), int(r), nil
 }
 
-/** Convert a recoverable signature into a normal signature.
- *
- *  Returns: 1
- *  Out: sig:    a pointer to a normal signature (cannot be NULL).
- *  In:  sigin:  a pointer to a recoverable signature (cannot be NULL).
- */
+// Convert a recoverable signature into a normal signature. The return code
+// is always 1.
 func EcdsaRecoverableSignatureConvert(ctx *Context, sig *EcdsaRecoverableSignature) (int, *EcdsaSignature, error) {
 	sigOut := newEcdsaSignature()
 	result := int(C.secp256k1_ecdsa_recoverable_signature_convert(ctx.ctx, sigOut.sig, sig.sig))
 	return result, sigOut, nil
 }
 
-/** Create a recoverable ECDSA signature.
- *
- *  Returns: 1: signature created
- *           0: the nonce generation function failed, or the private key was invalid.
- *  Args:    ctx:    pointer to a context object, initialized for signing (cannot be NULL)
- *  Out:     sig:    pointer to an array where the signature will be placed (cannot be NULL)
- *  In:      msg32:  the 32-byte message hash being signed (cannot be NULL)
- *           seckey: pointer to a 32-byte secret key (cannot be NULL)
- *           noncefp:pointer to a nonce generation function. If NULL, secp256k1_nonce_function_default is used
- *           ndata:  pointer to arbitrary data used by the nonce generation function (can be NULL)
- */
+// Create a recoverable ECDSA signature. The return code is 1 when the sig
+// was created, or 0 if nonce generation failed or the private key was
+// invalid.
 func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaRecoverableSignature, error) {
 	if len(msg32) != LenMsgHash {
 		return 0, nil, errors.New(ErrorMsg32Size)
@@ -543,15 +509,9 @@ func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *Ecds
 
 }
 
-/** Recover an ECDSA public key from a signature.
- *
- *  Returns: 1: public key successfully recovered (which guarantees a correct signature).
- *           0: otherwise.
- *  Args:    ctx:        pointer to a context object, initialized for verification (cannot be NULL)
- *  Out:     pubkey:     pointer to the recovered public key (cannot be NULL)
- *  In:      sig:        pointer to initialized signature that supports pubkey recovery (cannot be NULL)
- *           msg32:      the 32-byte message hash assumed to be signed (cannot be NULL)
- */
+// Recover an ECDSA public key from a signature. The return code is 1 if
+// the key was successfully recovered (which guarantees a correct
+// signature), and is 0 otherwise.
 func EcdsaRecover(ctx *Context, sig *EcdsaRecoverableSignature, msg32 []byte) (int, *PublicKey, error) {
 	if len(msg32) != LenMsgHash {
 		return 0, nil, errors.New(ErrorMsg32Size)

@@ -2,10 +2,10 @@ package secp256k1
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"testing"
-	"fmt"
 )
 
 type PrivkeyTweakAddTestCase struct {
@@ -140,7 +140,7 @@ func TestPrivkeyVerifyFixtures(t *testing.T) {
 	fixtures := GetPrivkeyTweakMulFixtures()
 	for i := 0; i < 1; i++ {
 		description := fmt.Sprintf("Test case %d", i)
-		t.Run(description, func (t *testing.T) {
+		t.Run(description, func(t *testing.T) {
 			fixture := fixtures[i]
 			priv := fixture.GetPrivateKey()
 			result, err := EcSeckeyVerify(ctx, priv)
@@ -151,21 +151,20 @@ func TestPrivkeyVerifyFixtures(t *testing.T) {
 
 func TestPrivkeyVerifyFailures(t *testing.T) {
 
-
 	testCase := []struct {
-		Priv string
+		Priv  string
 		Error string
 	}{
 		{
-			Priv: ``,
+			Priv:  ``,
 			Error: ErrorPrivateKeyNull,
 		},
 		{
-			Priv: `ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
+			Priv:  `ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
 			Error: ErrorPrivateKeyInvalid,
 		},
 		{
-			Priv: `FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142`,
+			Priv:  `FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142`,
 			Error: ErrorPrivateKeyInvalid,
 		},
 	}

@@ -1,10 +1,10 @@
 package secp256k1
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"strings"
-	"fmt"
 	"testing"
 )
 

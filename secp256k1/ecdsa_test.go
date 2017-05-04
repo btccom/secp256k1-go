@@ -71,7 +71,7 @@ func Test_Ecdsa_InvalidSig(t *testing.T) {
 	}
 
 	sig := newEcdsaSignature()
-	pk := newPublicKey();
+	pk := newPublicKey()
 	r, err := EcdsaVerify(ctx, sig, []byte{}, pk)
 	assert.Error(t, err)
 	assert.Equal(t, 0, r)
