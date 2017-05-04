@@ -60,6 +60,30 @@ func TestParseCompactRequires64Bytes(t *testing.T) {
 	assert.Equal(t, ErrorCompactSigSize, err.Error())
 }
 
+func Test_EcdsaSignatureParseCompact(t *testing.T) {
+	ctx, err := ContextCreate(uint(ContextSign | ContextVerify))
+	if err != nil {
+		panic(err)
+	}
+
+	str := "fe5fe404f3d8c21e1204a08c38ff3912d43c5a22541d2f1cdc4977cbcad240015a3b6e9040f62cacf016df4fef9412091592e4908e5e3a7bd2a42a4d1be01951"
+	sigByte, err := hex.DecodeString(str)
+
+	s, sig, err := EcdsaSignatureParseCompact(ctx, sigByte)
+	if err != nil {
+		panic(err)
+	}
+
+	assert.IsType(t, EcdsaSignature{}, *sig)
+	assert.Equal(t, 1, s)
+	assert.NoError(t, err)
+
+	s, out, err := EcdsaSignatureSerializeCompact(ctx, sig)
+	assert.Equal(t, 1, s)
+	assert.NoError(t, err)
+	assert.Equal(t, str, hex.EncodeToString(out))
+}
+
 func TestParseCompactMustBeValid(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
