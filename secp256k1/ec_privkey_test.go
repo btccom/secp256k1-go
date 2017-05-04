@@ -117,14 +117,17 @@ func TestPrivkeyTweakMulFixtures(t *testing.T) {
 	fixtures := GetPrivkeyTweakMulFixtures()
 
 	for i := 0; i < 1; i++ {
-		fixture := fixtures[i]
-		priv := fixture.GetPrivateKey()
-		tweak := fixture.GetTweak()
+		description := fmt.Sprintf("Test case %d", i)
+		t.Run(description, func(t *testing.T) {
+			fixture := fixtures[i]
+			priv := fixture.GetPrivateKey()
+			tweak := fixture.GetTweak()
 
-		r, err := EcPrivkeyTweakMul(ctx, priv, tweak)
-		spOK(t, r, err)
+			r, err := EcPrivkeyTweakMul(ctx, priv, tweak)
+			spOK(t, r, err)
 
-		assert.Equal(t, fixture.GetTweaked(), priv)
+			assert.Equal(t, fixture.GetTweaked(), priv)
+		})
 	}
 }
 
@@ -147,22 +150,22 @@ func TestPrivkeyVerifyFixtures(t *testing.T) {
 }
 
 func TestPrivkeyVerifyFailures(t *testing.T) {
-	beyondOrder, _ := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
+
 
 	testCase := []struct {
-		Priv []byte
+		Priv string
 		Error string
 	}{
 		{
-			Priv: []byte(``),
+			Priv: ``,
 			Error: ErrorPrivateKeyNull,
 		},
 		{
-			Priv: []byte{0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,},
+			Priv: `ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
 			Error: ErrorPrivateKeyInvalid,
 		},
 		{
-			Priv: beyondOrder,
+			Priv: `FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142`,
 			Error: ErrorPrivateKeyInvalid,
 		},
 	}
@@ -175,7 +178,9 @@ func TestPrivkeyVerifyFailures(t *testing.T) {
 		description := fmt.Sprintf("Test case %d", i)
 		t.Run(description, func(t *testing.T) {
 			test := testCase[i]
-			r, err := EcSeckeyVerify(ctx, test.Priv)
+
+			key, _ := hex.DecodeString(test.Priv)
+			r, err := EcSeckeyVerify(ctx, key)
 			assert.Equal(t, 0, r)
 			assert.Error(t, err)
 			assert.Equal(t, test.Error, err.Error())
