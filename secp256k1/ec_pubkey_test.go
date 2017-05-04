@@ -457,7 +457,7 @@ func TestPubkeyCombineWithOneReturnsSame(t *testing.T) {
 	// privkey * G
 	r, pubkey, err := EcPubkeyCreate(ctx, privkey)
 	spOK(t, r, err)
-
+	
 	vPoint := []*PublicKey{pubkey}
 	r, combinedPoint, err := EcPubkeyCombine(ctx, vPoint)
 	spOK(t, r, err)
@@ -477,11 +477,13 @@ func TestPubkeyCombineInvalidSum(t *testing.T) {
 	r, pubkey, err := EcPubkeyCreate(ctx, privkey)
 	spOK(t, r, err)
 
+	// -privkey*G
 	r, pubkeyNegate, err := EcPubkeyCreate(ctx, privkey)
 	spOK(t, r, err)
 	r, err = EcPubkeyNegate(ctx, pubkeyNegate)
 	spOK(t, r, err)
 
+	// (privkey-privkey)*G
 	vPoint := []*PublicKey{pubkey, pubkeyNegate}
 	r, combinedPoint, err := EcPubkeyCombine(ctx, vPoint)
 	assert.Error(t, err)
