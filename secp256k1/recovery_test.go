@@ -54,6 +54,21 @@ func TestEcdsaSignRecoverableChecksPrivkeySize(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, ErrorPrivateKeySize, err.Error())
 }
+func TestEcdsaSignRecoverableChecksPrivateKey(t *testing.T) {
+	ctx, err := ContextCreate(ContextSign | ContextVerify)
+	if err != nil {
+		panic(err)
+	}
+
+	priv, _ := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142")
+	msg32 := testingRand(32)
+
+	r, _, err := EcdsaSignRecoverable(ctx, msg32, priv)
+	assert.Equal(t, 0, r)
+	assert.Error(t, err)
+	assert.Equal(t, ErrorProducingRecoverableSignature, err.Error())
+}
+
 func TestEcdsaSignRecoverableChecksMsg32(t *testing.T) {
 	ctx, err := ContextCreate(ContextSign | ContextVerify)
 	if err != nil {
