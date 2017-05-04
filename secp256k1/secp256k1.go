@@ -43,6 +43,7 @@ const (
 	ErrorTweakSize      string = "Tweak must be exactly 32 bytes"
 	ErrorMsg32Size      string = "Message hash must be exactly 32 bytes"
 	ErrorPrivateKeySize string = "Private key must be exactly 32 bytes"
+	ErrorPublicKeySize string = "Public key must be 33 or 65 bytes"
 
 	ErrorTweakingPublicKey  string = "Unable to tweak this public key"
 	ErrorTweakingPrivateKey string = "Unable to tweak this private key"
@@ -166,7 +167,7 @@ func ContextRandomize(ctx *Context, seed32 [32]byte) int {
 func EcPubkeyParse(ctx *Context, publicKey []byte) (int, *PublicKey, error) {
 	l := len(publicKey)
 	if l != LenCompressed && l != LenUncompressed {
-		return 0, nil, errors.New(ErrorPublicKeyParse)
+		return 0, nil, errors.New(ErrorPublicKeySize)
 	}
 
 	pk := newPublicKey()
@@ -195,18 +196,15 @@ func EcPubkeyParse(ctx *Context, publicKey []byte) (int, *PublicKey, error) {
 func EcPubkeySerialize(ctx *Context, publicKey *PublicKey, flags uint) (int, []byte, error) {
 	var size int
 	if flags == EcCompressed {
-		size = 33
+		size = LenCompressed
 	} else {
-		size = 65
+		size = LenUncompressed
 	}
 
 	output := make([]C.uchar, size)
 	outputLen := C.size_t(size)
 
 	result := int(C.secp256k1_ec_pubkey_serialize(ctx.ctx, &output[0], &outputLen, publicKey.pk, C.uint(flags)))
-	if result != 1 {
-		return result, []byte(``), errors.New(ErrorPublicKeySerialize)
-	}
 	return result, goBytes(output, C.int(outputLen)), nil
 }
 
@@ -255,9 +253,6 @@ func EcdsaSignatureSerializeCompact(ctx *Context, sig *EcdsaSignature) (int, []b
 	outputLen := C.size_t(64)
 
 	result := int(C.secp256k1_ecdsa_signature_serialize_compact(ctx.ctx, &output[0], sig.sig))
-	if result != 1 {
-		return result, []byte(``), errors.New(ErrorCompactSigParse)
-	}
 	return result, goBytes(output, C.int(outputLen)), nil
 }
 

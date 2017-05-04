@@ -215,17 +215,20 @@ func TestPubkeyTweakMulFixtures(t *testing.T) {
 	fixtures := GetPubkeyTweakMulFixtures()
 
 	for i := 0; i < 1; i++ {
-		fixture := fixtures[i]
-		pubkey := fixture.GetPublicKey(ctx)
-		tweak := fixture.GetTweak()
+		description := fmt.Sprintf("Test case %d", i)
+		t.Run(description, func (t *testing.T) {
+			fixture := fixtures[i]
+			pubkey := fixture.GetPublicKey(ctx)
+			tweak := fixture.GetTweak()
 
-		r, err := EcPubkeyTweakMul(ctx, pubkey, tweak)
-		spOK(t, r, err)
+			r, err := EcPubkeyTweakMul(ctx, pubkey, tweak)
+			spOK(t, r, err)
 
-		r, serialized, err := EcPubkeySerialize(ctx, pubkey, EcUncompressed)
-		spOK(t, r, err)
+			r, serialized, err := EcPubkeySerialize(ctx, pubkey, EcUncompressed)
+			spOK(t, r, err)
 
-		assert.Equal(t, fixture.GetTweaked(), serialized)
+			assert.Equal(t, fixture.GetTweaked(), serialized)
+		})
 	}
 }
 
@@ -235,22 +238,22 @@ func TestSecretKeyMustBeValid(t *testing.T) {
 		panic(err)
 	}
 
-	numTests := 1
+	numTests := 2
 
-	badKey, err := hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141")
-	if err != nil {
-		panic(err)
-	}
-
-	tests := make([][]byte, numTests)
-	tests[0] = badKey
+	tests := make([]string, numTests)
+	tests[0] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+	tests[1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364142"
 
 	for i := 0; i < numTests; i++ {
-		r, pubkey, err := EcPubkeyCreate(ctx, tests[i])
-		assert.Error(t, err)
-		assert.Equal(t, 0, r)
-		assert.Nil(t, pubkey)
-		assert.Equal(t, ErrorPublicKeyCreate, err.Error())
+		description := fmt.Sprintf("Test case %d", i)
+		t.Run(description, func (t *testing.T) {
+			privkey, _ := hex.DecodeString(tests[i])
+			r, pubkey, err := EcPubkeyCreate(ctx, privkey)
+			assert.Error(t, err)
+			assert.Equal(t, 0, r)
+			assert.Nil(t, pubkey)
+			assert.Equal(t, ErrorPublicKeyCreate, err.Error())
+		})
 	}
 }
 func TestPubKeyParseStringMustBeValid(t *testing.T) {
@@ -271,12 +274,22 @@ func TestPubKeyParseStringMustBeValid(t *testing.T) {
 	tests[5] = "99726fa5b19e9406aaa46ee22fd9e81a09dd5eb7c87505b93a11efcf4b945e778c"
 
 	for i := 0; i < numTests; i++ {
-		hexBytes, _ := hex.DecodeString(tests[i])
-		r, pubkey, err := EcPubkeyParse(ctx, hexBytes)
-		assert.Error(t, err, fmt.Sprintf("Test case %d", i))
-		assert.Equal(t, 0, r, i)
-		assert.Nil(t, pubkey, i)
-		assert.Equal(t, ErrorPublicKeyParse, err.Error())
+		description := fmt.Sprintf("Test case %d", i)
+		t.Run(description, func (t *testing.T) {
+			hexBytes, _ := hex.DecodeString(tests[i])
+			r, pubkey, err := EcPubkeyParse(ctx, hexBytes)
+
+			assert.Error(t, err, description)
+			assert.Equal(t, 0, r, i, description)
+			assert.Nil(t, pubkey, i, description)
+			l := len(hexBytes)
+			if l != LenCompressed && l != LenUncompressed {
+				assert.Equal(t, ErrorPublicKeySize, err.Error(), description)
+			} else {
+				assert.Equal(t, ErrorPublicKeyParse, err.Error(), description)
+			}
+		})
+
 	}
 }
 
