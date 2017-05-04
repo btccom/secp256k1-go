@@ -35,6 +35,10 @@ const (
 
 	LenCompressed   int = 33
 	LenUncompressed int = 65
+	LenMsgHash      int = 32
+	LenPrivateKey   int = 32
+	LenCompactSig   int = 64
+	LenMaxDerSig    int = 72
 
 	ErrorEcdh             string = "Unable to do ECDH"
 	ErrorPublicKeyCreate  string = "Unable to produce public key"
@@ -203,7 +207,6 @@ func EcPubkeySerialize(ctx *Context, publicKey *PublicKey, flags uint) (int, []b
 
 	output := make([]C.uchar, size)
 	outputLen := C.size_t(size)
-
 	result := int(C.secp256k1_ec_pubkey_serialize(ctx.ctx, &output[0], &outputLen, publicKey.pk, C.uint(flags)))
 	return result, goBytes(output, C.int(outputLen)), nil
 }
@@ -224,7 +227,7 @@ func EcPubkeySerialize(ctx *Context, publicKey *PublicKey, flags uint) (int, []b
  *  message and public key.
  */
 func EcdsaSignatureParseCompact(ctx *Context, signature []byte) (int, *EcdsaSignature, error) {
-	if len(signature) != 64 {
+	if len(signature) != LenCompactSig {
 		return 0, nil, errors.New(ErrorCompactSigSize)
 	}
 
@@ -249,11 +252,9 @@ func EcdsaSignatureParseCompact(ctx *Context, signature []byte) (int, *EcdsaSign
  *  See secp256k1_ecdsa_signature_parse_compact for details about the encoding.
  */
 func EcdsaSignatureSerializeCompact(ctx *Context, sig *EcdsaSignature) (int, []byte, error) {
-	output := make([]C.uchar, 64)
-	outputLen := C.size_t(64)
-
+	output := make([]C.uchar, LenCompactSig)
 	result := int(C.secp256k1_ecdsa_signature_serialize_compact(ctx.ctx, &output[0], sig.sig))
-	return result, goBytes(output, C.int(outputLen)), nil
+	return result, goBytes(output, C.int(LenCompactSig)), nil
 }
 
 /** Parse a DER ECDSA signature.
@@ -296,9 +297,8 @@ func EcdsaSignatureParseDer(ctx *Context, signature []byte) (int, *EcdsaSignatur
  *  In:     sig:       a pointer to an initialized signature object
  */
 func EcdsaSignatureSerializeDer(ctx *Context, sig *EcdsaSignature) (int, []byte, error) {
-	serializedSig := make([]C.uchar, 72)
+	serializedSig := make([]C.uchar, LenMaxDerSig)
 	outputLen := C.size_t(len(serializedSig))
-
 	result := int(C.secp256k1_ecdsa_signature_serialize_der(ctx.ctx, &serializedSig[0], &outputLen, sig.sig))
 	if result != 1 {
 		return result, []byte(``), errors.New(ErrorDerSigSerialize)
@@ -343,10 +343,10 @@ func EcdsaVerify(ctx *Context, sig *EcdsaSignature, msg32 []byte, pubkey *Public
  * secp256k1_ecdsa_signature_normalize for more details.
  */
 func EcdsaSign(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaSignature, error) {
-	if len(msg32) != 32 {
+	if len(msg32) != LenMsgHash {
 		return 0, nil, errors.New(ErrorMsg32Size)
 	}
-	if len(seckey) != 32 {
+	if len(seckey) != LenPrivateKey {
 		return 0, nil, errors.New(ErrorPrivateKeySize)
 	}
 
@@ -381,7 +381,7 @@ func EcSeckeyVerify(ctx *Context, seckey []byte) int {
  *  In:     seckey:     pointer to a 32-byte private key (cannot be NULL)
  */
 func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
-	if len(seckey) != 32 {
+	if len(seckey) != LenPrivateKey {
 		return 0, nil, errors.New(ErrorPrivateKeySize)
 	}
 
@@ -401,7 +401,7 @@ func EcPubkeyCreate(ctx *Context, seckey []byte) (int, *PublicKey, error) {
  *  In/Out: pubkey:     pointer to the public key to be negated (cannot be NULL)
  */
 func EcPrivkeyNegate(ctx *Context, seckey []byte) (int, error) {
-	if len(seckey) != 32 {
+	if len(seckey) != LenPrivateKey {
 		return 0, errors.New(ErrorPrivateKeySize)
 	}
 
@@ -433,11 +433,11 @@ func EcPubkeyNegate(ctx *Context, pubkey *PublicKey) (int, error) {
  * In:      tweak:  pointer to a 32-byte tweak.
  */
 func EcPrivkeyTweakAdd(ctx *Context, seckey []byte, tweak []byte) (int, error) {
-	if len(seckey) != 32 {
-		return 0, errors.New(ErrorPrivateKeySize)
-	}
-	if len(tweak) != 32 {
+	if len(tweak) != LenPrivateKey {
 		return 0, errors.New(ErrorTweakSize)
+	}
+	if len(seckey) != LenPrivateKey {
+		return 0, errors.New(ErrorPrivateKeySize)
 	}
 
 	result := int(C.secp256k1_ec_privkey_tweak_add(ctx.ctx, (*C.uchar)(unsafe.Pointer(&seckey[0])), cBuf(tweak[:])))
@@ -458,11 +458,11 @@ func EcPrivkeyTweakAdd(ctx *Context, seckey []byte, tweak []byte) (int, error) {
  * In:      tweak:  pointer to a 32-byte tweak.
  */
 func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
-	if len(seckey) != 32 {
-		return 0, errors.New(ErrorPrivateKeySize)
-	}
-	if len(tweak) != 32 {
+	if len(tweak) != LenPrivateKey {
 		return 0, errors.New(ErrorTweakSize)
+	}
+	if len(seckey) != LenPrivateKey {
+		return 0, errors.New(ErrorPrivateKeySize)
 	}
 
 	result := int(C.secp256k1_ec_privkey_tweak_mul(ctx.ctx, (*C.uchar)(unsafe.Pointer(&seckey[0])), cBuf(tweak[:])))
@@ -480,7 +480,7 @@ func EcPrivkeyTweakMul(ctx *Context, seckey []byte, tweak []byte) (int, error) {
  * In:     tweak:  pointer to a 32-byte tweak.
  */
 func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
-	if len(tweak) != 32 {
+	if len(tweak) != LenPrivateKey {
 		return 0, errors.New(ErrorTweakSize)
 	}
 
@@ -500,7 +500,7 @@ func EcPubkeyTweakAdd(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
  * In:      tweak:  pointer to a 32-byte tweak.
  */
 func EcPubkeyTweakMul(ctx *Context, pk *PublicKey, tweak []byte) (int, error) {
-	if len(tweak) != 32 {
+	if len(tweak) != LenPrivateKey {
 		return 0, errors.New(ErrorTweakSize)
 	}
 
@@ -549,11 +549,11 @@ func EcPubkeyCombine(ctx *Context, vPk []*PublicKey) (int, *PublicKey, error) {
  *           privkey:    a 32-byte scalar with which to multiply the point
  */
 func Ecdh(ctx *Context, pubKey *PublicKey, privKey []byte) (int, []byte, error) {
-	if len(privKey) != 32 {
+	if len(privKey) != LenPrivateKey {
 		return 0, []byte{}, errors.New(ErrorPrivateKeySize)
 	}
 
-	secret := make([]byte, 32)
+	secret := make([]byte, LenPrivateKey)
 	result := int(C.secp256k1_ecdh(ctx.ctx, cBuf(secret[:]), pubKey.pk, cBuf(privKey[:])))
 	if result != 1 {
 		return result, []byte{}, errors.New(ErrorEcdh)
@@ -570,12 +570,11 @@ func Ecdh(ctx *Context, pubKey *PublicKey, privKey []byte) (int, []byte, error) 
  *        recid:   the recovery id (0, 1, 2 or 3)
  */
 func EcdsaRecoverableSignatureParseCompact(ctx *Context, signature []byte, recid int) (int, *EcdsaRecoverableSignature, error) {
-	if len(signature) != 64 {
+	if len(signature) != LenCompactSig {
 		return 0, nil, errors.New(ErrorCompactSigSize)
 	}
 
 	sig := newEcdsaRecoverableSignature()
-
 	result := int(C.secp256k1_ecdsa_recoverable_signature_parse_compact(ctx.ctx, sig.sig,
 		(*C.uchar)(unsafe.Pointer(&signature[0])), (C.int(recid))))
 
@@ -594,12 +593,10 @@ func EcdsaRecoverableSignatureParseCompact(ctx *Context, signature []byte, recid
  *  In:   sig:      a pointer to an initialized signature object (cannot be NULL)
  */
 func EcdsaRecoverableSignatureSerializeCompact(ctx *Context, sig *EcdsaRecoverableSignature) (int, []byte, int, error) {
-	output := make([]C.uchar, 64)
-	outputLen := C.size_t(64)
-
+	output := make([]C.uchar, LenCompactSig)
 	r := C.int(0)
 	result := int(C.secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx.ctx, &output[0], &r, sig.sig))
-	return result, goBytes(output, C.int(outputLen)), int(r), nil
+	return result, goBytes(output, C.int(LenCompactSig)), int(r), nil
 }
 
 /** Convert a recoverable signature into a normal signature.
@@ -626,10 +623,10 @@ func EcdsaRecoverableSignatureConvert(ctx *Context, sig *EcdsaRecoverableSignatu
  *           ndata:  pointer to arbitrary data used by the nonce generation function (can be NULL)
  */
 func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *EcdsaRecoverableSignature, error) {
-	if len(msg32) != 32 {
+	if len(msg32) != LenMsgHash {
 		return 0, nil, errors.New(ErrorMsg32Size)
 	}
-	if len(seckey) != 32 {
+	if len(seckey) != LenPrivateKey {
 		return 0, nil, errors.New(ErrorPrivateKeySize)
 	}
 
@@ -652,7 +649,7 @@ func EcdsaSignRecoverable(ctx *Context, msg32 []byte, seckey []byte) (int, *Ecds
  *           msg32:      the 32-byte message hash assumed to be signed (cannot be NULL)
  */
 func EcdsaRecover(ctx *Context, sig *EcdsaRecoverableSignature, msg32 []byte) (int, *PublicKey, error) {
-	if len(msg32) != 32 {
+	if len(msg32) != LenMsgHash {
 		return 0, nil, errors.New(ErrorMsg32Size)
 	}
 	recovered := newPublicKey()
