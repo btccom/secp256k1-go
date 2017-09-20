@@ -24,6 +24,7 @@ addons:
 
 install:
  - glide update
+ - make deps
  - make test test-race coverage
 
 after_script:
