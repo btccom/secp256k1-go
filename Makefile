@@ -9,12 +9,8 @@ deps-secp256k1:
 deps-1:
 		cd secp256k1/c-secp256k1 && make -j4 && cd ..
 
-build-test: 
-		go build -o build/test bin/test/main.go
-build-script-ptr-ptr: 
-		go build -o build/scratch_ptr_ptr bin/scratch_ptr_ptr/main.go
-
 test: test-cleanup test-secp256k1
+test-race: test-race-secp256k1
 
 test-cleanup: test-cleanup-binaries test-cleanup-coverage test-cleanup-profile
 
@@ -32,6 +28,11 @@ test-cleanup-profile:
 
 test-secp256k1: test-cleanup
 	go test -coverprofile=coverage/secp256k1.out -o build/tests/secp256k1.test \
+	github.com/btccom/secp256k1-go/secp256k1... \
+	$(TESTARGS)
+
+test-race-secp256k1:
+	go test -race \
 	github.com/btccom/secp256k1-go/secp256k1... \
 	$(TESTARGS)
 

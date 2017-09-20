@@ -1,0 +1,32 @@
+language: go
+
+# only build master branch (and PRs)
+branches:
+  only:
+    - "master"
+
+go:
+  - 1.7.x
+  - 1.8.x
+  - master
+
+cache:
+  directories:
+    ${TRAVIS_BUILD_DIR}/vendor
+    ${HOME}/.glide
+
+addons:
+  apt:
+    sources:
+      - sourceline: ppa:masterminds/glide
+    packages:
+      - glide
+
+install:
+ - glide update
+ - make test test-race coverage
+
+after_script:
+ - go get github.com/mattn/goveralls
+ - make coverage-concat
+ - $HOME/gopath/bin/goveralls -coverprofile=coverage/full -service=travis-ci
