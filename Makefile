@@ -12,13 +12,9 @@ deps-1:
 test: test-cleanup test-secp256k1
 test-race: test-race-secp256k1
 
-test-cleanup: test-cleanup-binaries test-cleanup-coverage test-cleanup-profile
+test-cleanup: test-cleanup-coverage test-cleanup-profile
 
 test-cleanup-coverage:
-	rm -rf build/tests/ 2>> /dev/null; \
-	mkdir build/tests/
-
-test-cleanup-binaries:
 	rm -rf coverage/ 2>> /dev/null; \
 	mkdir coverage/
 
@@ -27,12 +23,12 @@ test-cleanup-profile:
 	mkdir profile/
 
 test-secp256k1: test-cleanup
-	go test -coverprofile=coverage/secp256k1.out -o build/tests/secp256k1.test \
+	go test -coverprofile=coverage/secp256k1.out -v \
 	github.com/btccom/secp256k1-go/secp256k1... \
 	$(TESTARGS)
 
 test-race-secp256k1:
-	go test -race \
+	go test -race -v \
 	github.com/btccom/secp256k1-go/secp256k1... \
 	$(TESTARGS)
 
